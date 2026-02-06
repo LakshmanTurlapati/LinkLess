@@ -1,0 +1,77 @@
+name: linkless
+description: LinkLess - Proximity-based conversation capture for students
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  cached_network_image: ^3.3.0
+  flutter_svg: ^2.0.9
+  shimmer: ^3.0.0
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # BLE - Proximity Detection
+  flutter_blue_plus: ^1.31.0
+
+  # Audio Recording
+  record: ^5.0.4
+  path_provider: ^2.1.1
+
+  # Networking
+  dio: ^5.4.0
+  web_socket_channel: ^2.4.0
+
+  # Authentication
+  flutter_secure_storage: ^9.0.0
+
+  # Local Database
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # Permissions
+  permission_handler: ^11.1.0
+
+  # Image
+  image_picker: ^1.0.4
+  image_cropper: ^5.0.1
+
+  # Utils
+  uuid: ^4.2.1
+  intl: ^0.19.0
+  url_launcher: ^6.2.1
+  share_plus: ^7.2.1
+  json_annotation: ^4.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: LinkLess
+      fonts:
+        - asset: assets/fonts/LinkLess-Regular.ttf
+        - asset: assets/fonts/LinkLess-Bold.ttf
+          weight: 700
