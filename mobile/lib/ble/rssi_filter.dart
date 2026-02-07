@@ -10,7 +10,6 @@ class RssiFilter {
   final double alpha;
 
   double? _filteredRssi;
-  bool _initialized = false;
 
   RssiFilter({this.alpha = 0.3});
 
@@ -20,14 +19,14 @@ class RssiFilter {
   /// Subsequent readings are smoothed using EMA.
   double update(int rawRssi) {
     final raw = rawRssi.toDouble();
+    final previous = _filteredRssi;
 
-    if (!_initialized) {
+    if (previous == null) {
       _filteredRssi = raw;
-      _initialized = true;
       return raw;
     }
 
-    _filteredRssi = alpha * raw + (1 - alpha) * _filteredRssi!;
+    _filteredRssi = alpha * raw + (1 - alpha) * previous;
     return _filteredRssi!;
   }
 
@@ -37,6 +36,5 @@ class RssiFilter {
   /// Reset filter to uninitialized state.
   void reset() {
     _filteredRssi = null;
-    _initialized = false;
   }
 }
