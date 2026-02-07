@@ -12,6 +12,7 @@ import 'package:linkless/features/profile/presentation/views/profile_creation_sc
 import 'package:linkless/features/profile/presentation/views/profile_edit_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
 import 'package:linkless/router/scaffold_with_nav_bar.dart';
+import 'package:linkless/screens/ble_debug_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -45,11 +46,15 @@ GoRouter appRouter(Ref ref) {
       final authState = ref.read(authProvider);
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isOnAuthRoute = state.matchedLocation.startsWith('/auth');
+      final isOnDebugRoute = state.matchedLocation.startsWith('/ble-debug');
       final isInitialOrLoading = authState.status == AuthStatus.initial ||
           authState.status == AuthStatus.loading;
 
       // While checking initial auth status, don't redirect.
       if (isInitialOrLoading) return null;
+
+      // Debug routes bypass auth guard (dev tool only).
+      if (isOnDebugRoute) return null;
 
       // If not authenticated, redirect to phone input (unless already on auth route).
       if (!isAuthenticated && !isOnAuthRoute) {
@@ -87,6 +92,12 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditScreen(),
+      ),
+
+      // BLE debug screen (dev tool, outside the shell, no auth required).
+      GoRoute(
+        path: '/ble-debug',
+        builder: (context, state) => const BleDebugScreen(),
       ),
 
       // Main app shell with bottom navigation.
