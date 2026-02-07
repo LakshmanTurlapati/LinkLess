@@ -8,6 +8,7 @@ import 'package:linkless/features/auth/presentation/views/otp_verification_scree
 import 'package:linkless/features/auth/presentation/views/phone_input_screen.dart';
 import 'package:linkless/features/conversations/presentation/views/conversations_screen.dart';
 import 'package:linkless/features/map/presentation/views/map_screen.dart';
+import 'package:linkless/features/recording/presentation/views/playback_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_creation_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_edit_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
@@ -111,6 +112,15 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: '/conversations',
                 builder: (context, state) => const ConversationsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id'] ?? '';
+                      return PlaybackScreen(conversationId: id);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
