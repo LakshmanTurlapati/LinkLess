@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     twilio_verify_service_sid: str = ""
     twilio_test_mode: bool = False
 
+    # AI Providers
+    deepgram_api_key: str = ""
+    openai_api_key: str = ""
+
     # App
     debug: bool = False
     api_prefix: str = "/api/v1"

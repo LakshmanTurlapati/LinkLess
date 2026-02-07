@@ -1,0 +1,81 @@
+"""Request and response schemas for conversation operations."""
+
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
+
+class ConversationCreate(BaseModel):
+    """Request body for creating a new conversation."""
+
+    user_id: uuid.UUID
+    peer_user_id: Optional[uuid.UUID] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
+
+
+class ConversationResponse(BaseModel):
+    """Response body for a conversation record."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    peer_user_id: Optional[uuid.UUID] = None
+    status: str
+    audio_storage_key: Optional[str] = None
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
+    created_at: datetime
+
+
+class TranscriptResponse(BaseModel):
+    """Response body for a transcript record."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    content: str
+    provider: str
+    language: str
+    word_count: Optional[int] = None
+    created_at: datetime
+
+
+class SummaryResponse(BaseModel):
+    """Response body for a summary record."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    content: str
+    key_topics: Optional[str] = None
+    provider: str
+    created_at: datetime
+
+
+class ConversationDetail(ConversationResponse):
+    """Extended conversation response with transcript and summary."""
+
+    transcript: Optional[TranscriptResponse] = None
+    summary: Optional[SummaryResponse] = None
+
+
+class UploadConfirmation(BaseModel):
+    """Request body for confirming audio upload."""
+
+    audio_storage_key: str
+
+
+class AudioPresignResponse(BaseModel):
+    """Response body with presigned URLs for audio upload/download."""
+
+    upload_url: str
+    audio_key: str
+    download_url: str
