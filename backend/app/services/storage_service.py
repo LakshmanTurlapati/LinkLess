@@ -1,6 +1,11 @@
-"""Tigris/S3-compatible object storage service for presigned URL generation."""
+"""Tigris/S3-compatible object storage service for presigned URL generation.
+
+Supports both audio file uploads (Phase 5/6) and profile photo uploads (Phase 3).
+Designed to be reusable across any file type that needs presigned URL upload.
+"""
 
 import logging
+import uuid
 
 import boto3
 from botocore.config import Config
@@ -13,8 +18,11 @@ logger = logging.getLogger(__name__)
 class StorageService:
     """Wraps boto3 S3 client with Tigris-compatible configuration.
 
-    Generates presigned URLs for uploading and downloading audio files
+    Generates presigned URLs for uploading and downloading files
     from Tigris object storage (S3-compatible API).
+
+    IMPORTANT: boto3 must be pinned to <=1.35.95. Versions 1.36.0+
+    break uploads to Tigris with MissingContentLength error.
     """
 
     def __init__(self) -> None:
@@ -77,3 +85,43 @@ class StorageService:
             ExpiresIn=expires_in,
         )
         return url
+
+    def generate_presigned_upload_url(
+        self,
+        user_id: str,
+        content_type: str = "image/jpeg",
+    ) -> dict:
+        """Generate a presigned URL for profile photo upload.
+
+        Creates a unique key under profiles/{user_id}/ and returns
+        both the upload URL and the object key for storage in the
+        user record.
+
+        Args:
+            user_id: The user's UUID string.
+            content_type: MIME type of the image (default image/jpeg).
+
+        Returns:
+            Dict with 'upload_url' (presigned PUT URL) and
+            'photo_key' (object key to store in DB).
+        """
+        key = f"profiles/{user_id}/{uuid.uuid4()}.jpg"
+        url = self.generate_upload_url(
+            key=key,
+            content_type=content_type,
+            expires_in=300,  # 5 minutes for photo uploads
+        )
+        return {"upload_url": url, "photo_key": key}
+
+    def get_public_url(self, key: str) -> str:
+        """Construct a public URL for an object stored in the bucket.
+
+        Uses the Tigris public URL pattern: https://{bucket}.t3.storage.dev/{key}
+
+        Args:
+            key: The S3 object key.
+
+        Returns:
+            The full public URL for the object.
+        """
+        return f"https://{self._bucket}.t3.storage.dev/{key}"
