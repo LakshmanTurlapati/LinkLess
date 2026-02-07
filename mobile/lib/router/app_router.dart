@@ -8,6 +8,8 @@ import 'package:linkless/features/auth/presentation/views/otp_verification_scree
 import 'package:linkless/features/auth/presentation/views/phone_input_screen.dart';
 import 'package:linkless/features/conversations/presentation/views/conversations_screen.dart';
 import 'package:linkless/features/map/presentation/views/map_screen.dart';
+import 'package:linkless/features/profile/presentation/views/profile_creation_screen.dart';
+import 'package:linkless/features/profile/presentation/views/profile_edit_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
 import 'package:linkless/router/scaffold_with_nav_bar.dart';
 
@@ -73,6 +75,18 @@ GoRouter appRouter(Ref ref) {
           final phone = state.uri.queryParameters['phone'] ?? '';
           return OtpVerificationScreen(phoneNumber: phone);
         },
+      ),
+
+      // Profile creation (outside the shell, no bottom nav).
+      GoRoute(
+        path: '/profile/create',
+        builder: (context, state) => const ProfileCreationScreen(),
+      ),
+
+      // Profile edit (outside the shell, no bottom nav).
+      GoRoute(
+        path: '/profile/edit',
+        builder: (context, state) => const ProfileEditScreen(),
       ),
 
       // Main app shell with bottom navigation.
