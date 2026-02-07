@@ -6,12 +6,15 @@ part of 'app_router.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appRouterHash() => r'd2978ef1f4438a7441aee94975993cf598a1e739';
+String _$appRouterHash() => r'5d8e682c4495d7deebd585eb579fc0ea9f9897d7';
 
 /// Provides the app-level GoRouter configuration.
 ///
-/// Uses StatefulShellRoute.indexedStack for bottom tab navigation
+/// Uses [StatefulShellRoute.indexedStack] for bottom tab navigation
 /// with three branches: Conversations, Map, Profile.
+///
+/// Tab state is preserved when switching between tabs because
+/// indexedStack keeps all branch navigators alive.
 ///
 /// Copied from [appRouter].
 @ProviderFor(appRouter)
