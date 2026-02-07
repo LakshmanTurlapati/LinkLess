@@ -49,7 +49,12 @@
 	<array>
 		<string>bluetooth-central</string>
 		<string>bluetooth-peripheral</string>
+		<string>audio</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Linkless records conversations when you are near another Linkless user.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Linkless saves where your conversations happen so you can see them on the map.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Linkless uses Bluetooth to detect nearby users for automatic conversation capture.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>

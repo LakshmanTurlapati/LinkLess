@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
+    <!-- Audio recording permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
     <!-- BLE hardware feature requirement -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
@@ -55,7 +59,7 @@
         <!-- Foreground service for BLE scanning in background -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="microphone|connectedDevice"
             android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
