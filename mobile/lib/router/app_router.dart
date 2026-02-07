@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
+import 'package:linkless/features/auth/presentation/views/otp_verification_screen.dart';
+import 'package:linkless/features/auth/presentation/views/phone_input_screen.dart';
 import 'package:linkless/features/conversations/presentation/views/conversations_screen.dart';
 import 'package:linkless/features/map/presentation/views/map_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
@@ -18,14 +21,61 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Uses [StatefulShellRoute.indexedStack] for bottom tab navigation
 /// with three branches: Conversations, Map, Profile.
 ///
-/// Tab state is preserved when switching between tabs because
-/// indexedStack keeps all branch navigators alive.
+/// Auth guard redirects unauthenticated users to the phone input screen.
+/// Authenticated users are redirected away from auth screens.
 @riverpod
 GoRouter appRouter(Ref ref) {
+  // Trigger initial auth check.
+  final notifier = ref.read(authProvider.notifier);
+  notifier.checkAuthStatus();
+
+  // Listenable adapter so GoRouter re-evaluates redirect on auth changes.
+  final authListenable = AuthStateListenable(ref);
+
+  // Clean up the listenable when the provider is disposed.
+  ref.onDispose(() => authListenable.dispose());
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/conversations',
+    refreshListenable: authListenable,
+    redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final isAuthenticated = authState.status == AuthStatus.authenticated;
+      final isOnAuthRoute = state.matchedLocation.startsWith('/auth');
+      final isInitialOrLoading = authState.status == AuthStatus.initial ||
+          authState.status == AuthStatus.loading;
+
+      // While checking initial auth status, don't redirect.
+      if (isInitialOrLoading) return null;
+
+      // If not authenticated, redirect to phone input (unless already on auth route).
+      if (!isAuthenticated && !isOnAuthRoute) {
+        return '/auth/phone-input';
+      }
+
+      // If authenticated but on an auth route, redirect to conversations.
+      if (isAuthenticated && isOnAuthRoute) {
+        return '/conversations';
+      }
+
+      return null;
+    },
     routes: [
+      // Auth routes (outside the shell, no bottom nav).
+      GoRoute(
+        path: '/auth/phone-input',
+        builder: (context, state) => const PhoneInputScreen(),
+      ),
+      GoRoute(
+        path: '/auth/otp',
+        builder: (context, state) {
+          final phone = state.uri.queryParameters['phone'] ?? '';
+          return OtpVerificationScreen(phoneNumber: phone);
+        },
+      ),
+
+      // Main app shell with bottom navigation.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return ScaffoldWithNavBar(navigationShell: navigationShell);
