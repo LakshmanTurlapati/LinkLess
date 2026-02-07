@@ -19,6 +19,10 @@ dependencies:
   json_annotation: ^4.9.0
   phone_form_field: ^10.0.17
   pinput: ^6.0.2
+  image_picker: ^1.2.1
+  image_cropper: ^11.0.0
+  flutter_image_compress: ^2.4.0
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
