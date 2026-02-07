@@ -9,38 +9,48 @@ in settings.redis_url.
 
 import logging
 
-from arq import Retry
-from arq.connections import RedisSettings
+from arq.connections import RedisSettings, create_pool
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.tasks.summarization import summarize_conversation
+from app.tasks.transcription import transcribe_conversation
 
 logger = logging.getLogger(__name__)
 
 
-async def example_task(ctx: dict, message: str) -> str:
-    """Placeholder task for verifying worker connectivity.
-
-    This will be replaced by real tasks (e.g., transcription) in Phase 6.
-
-    Args:
-        ctx: ARQ worker context dictionary.
-        message: A test message to echo back.
-
-    Returns:
-        The echoed message string.
-    """
-    logger.info("example_task received: %s", message)
-    return f"Processed: {message}"
-
-
 async def startup(ctx: dict) -> None:
-    """Worker startup hook. Called once when the worker process starts."""
-    logger.info("Worker started")
+    """Worker startup hook. Creates DB session factory and Redis pool.
+
+    Called once when the worker process starts. Stores shared resources
+    in the context dict for use by all task functions.
+    """
+    engine = create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        pool_pre_ping=True,
+    )
+    ctx["engine"] = engine
+    ctx["db_session_factory"] = async_sessionmaker(
+        engine, expire_on_commit=False
+    )
+
+    ctx["redis"] = await create_pool(
+        RedisSettings.from_dsn(settings.redis_url)
+    )
+
+    logger.info("Worker started with DB and Redis connections")
 
 
 async def shutdown(ctx: dict) -> None:
-    """Worker shutdown hook. Called once when the worker process stops."""
-    logger.info("Worker stopped")
+    """Worker shutdown hook. Disposes of the database engine.
+
+    Called once when the worker process stops. Cleans up shared resources.
+    """
+    engine = ctx.get("engine")
+    if engine is not None:
+        await engine.dispose()
+    logger.info("Worker stopped, DB engine disposed")
 
 
 class WorkerSettings:
@@ -50,9 +60,9 @@ class WorkerSettings:
     registered task functions, and lifecycle hooks.
     """
 
-    functions = [example_task]
+    functions = [transcribe_conversation, summarize_conversation]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    max_jobs = 10
-    job_timeout = 300  # 5 minutes
+    max_jobs = 5
+    job_timeout = 600  # 10 minutes

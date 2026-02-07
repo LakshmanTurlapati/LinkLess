@@ -46,5 +46,24 @@ services:
       - ./backend:/code
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://linkless:linkless@postgres:5432/linkless"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/code
+    command: ["arq", "app.tasks.worker.WorkerSettings"]
+
 volumes:
   postgres_data:
