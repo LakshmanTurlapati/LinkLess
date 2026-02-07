@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Linkless uses Bluetooth to detect nearby users for automatic conversation capture.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Linkless uses Bluetooth to let nearby users detect you.</string>
 </dict>
 </plist>
