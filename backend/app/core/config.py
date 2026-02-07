@@ -20,6 +20,17 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
 
+    # JWT
+    jwt_secret_key: str = ""
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 30
+
+    # Twilio Verify
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_verify_service_sid: str = ""
+    twilio_test_mode: bool = False
+
     # App
     debug: bool = False
     api_prefix: str = "/api/v1"

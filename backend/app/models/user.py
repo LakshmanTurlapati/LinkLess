@@ -1,11 +1,15 @@
 """User model for the users table."""
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.refresh_token import RefreshToken
 
 
 class User(Base, TimestampMixin):
@@ -27,6 +31,10 @@ class User(Base, TimestampMixin):
     )
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        "RefreshToken", back_populates="user", lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} phone={self.phone_number}>"
