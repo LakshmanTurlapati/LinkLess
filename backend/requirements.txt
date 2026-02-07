@@ -6,7 +6,11 @@ sqlalchemy[asyncio]==2.0.46
 asyncpg==0.30.0
 geoalchemy2==0.18.1
 alembic==1.18.3
-boto3==1.35.99
+# CRITICAL: Pin boto3 to 1.35.95 -- versions 1.36.0+ break uploads to Tigris
+# (and other S3-compatible providers) with MissingContentLength error.
+# See: https://www.tigrisdata.com/blog/downgrade-py-js/
+boto3==1.35.95
+Pillow==11.1.0
 arq==0.27.0
 redis==5.2.1
 httpx==0.28.1

@@ -10,6 +10,7 @@ from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.refresh_token import RefreshToken
+    from app.models.social_link import SocialLink
 
 
 class User(Base, TimestampMixin):
@@ -34,6 +35,12 @@ class User(Base, TimestampMixin):
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         "RefreshToken", back_populates="user", lazy="selectin"
+    )
+    social_links: Mapped[list["SocialLink"]] = relationship(
+        "SocialLink",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:
