@@ -1,37 +1,16 @@
 import 'package:flutter/material.dart';
 
-/// Placeholder screen for the Conversations tab.
+import 'package:linkless/features/recording/presentation/views/conversation_list_screen.dart';
+
+/// Entry point for the Conversations tab.
 ///
-/// Will be replaced with the full conversations list in Phase 3.
+/// Delegates to [ConversationListScreen] which displays the real conversation
+/// list backed by the Drift database with reactive stream updates.
 class ConversationsScreen extends StatelessWidget {
   const ConversationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Conversations'),
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Conversations',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return const ConversationListScreen();
   }
 }
