@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 import 'package:linkless/features/profile/domain/models/social_link.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
+import 'package:linkless/features/profile/presentation/widgets/invisible_mode_toggle.dart';
 
 /// Main profile tab screen.
 ///
@@ -188,6 +189,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
 
+            // Privacy section
+            const Divider(),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Privacy',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            const InvisibleModeToggle(),
             const SizedBox(height: 16),
 
             // Edit profile button
