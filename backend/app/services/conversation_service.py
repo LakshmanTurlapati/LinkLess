@@ -1,14 +1,16 @@
 """Conversation business logic for CRUD operations and status management."""
 
+import datetime as dt_mod
 import logging
 import uuid as uuid_mod
 from typing import Optional
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.conversation import Conversation, Summary, Transcript
+from app.models.user import User
 from app.schemas.conversation import ConversationCreate
 
 logger = logging.getLogger(__name__)
@@ -193,3 +195,41 @@ class ConversationService:
             "transcript": transcript,
             "summary": summary,
         }
+
+    async def get_map_conversations(
+        self, user_id: uuid_mod.UUID, date: dt_mod.date
+    ) -> list:
+        """Fetch conversations for map display on a given date.
+
+        Joins with the User table to retrieve peer profile info,
+        extracts PostGIS coordinates via ST_X/ST_Y, and filters
+        to only conversations that have GPS location data.
+
+        Args:
+            user_id: The authenticated user's UUID.
+            date: The date to filter conversations by.
+
+        Returns:
+            List of Row objects with conversation and peer data.
+        """
+        stmt = (
+            select(
+                Conversation.id,
+                func.ST_X(Conversation.location).label("longitude"),
+                func.ST_Y(Conversation.location).label("latitude"),
+                Conversation.started_at,
+                Conversation.duration_seconds,
+                User.display_name.label("peer_display_name"),
+                User.photo_url.label("peer_photo_key"),
+                User.is_anonymous.label("peer_is_anonymous"),
+            )
+            .outerjoin(User, Conversation.peer_user_id == User.id)
+            .where(
+                Conversation.user_id == user_id,
+                Conversation.location.isnot(None),
+                cast(Conversation.started_at, Date) == date,
+            )
+            .order_by(Conversation.started_at)
+        )
+        result = await self.db.execute(stmt)
+        return result.all()
