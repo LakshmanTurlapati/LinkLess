@@ -4,7 +4,8 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Computed, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -60,6 +61,14 @@ class Transcript(Base, TimestampMixin):
     provider: Mapped[str] = mapped_column(String(50))
     language: Mapped[str] = mapped_column(String(10), default="en")
     word_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', coalesce(content, ''))",
+            persisted=True,
+        ),
+        nullable=True,
+    )
 
     def __repr__(self) -> str:
         return f"<Transcript id={self.id} conv={self.conversation_id}>"
@@ -81,6 +90,14 @@ class Summary(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(Text)
     key_topics: Mapped[str | None] = mapped_column(Text, nullable=True)
     provider: Mapped[str] = mapped_column(String(50))
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('english', coalesce(content, '') || ' ' || coalesce(key_topics, ''))",
+            persisted=True,
+        ),
+        nullable=True,
+    )
 
     def __repr__(self) -> str:
         return f"<Summary id={self.id} conv={self.conversation_id}>"
