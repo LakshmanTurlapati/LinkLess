@@ -589,19 +589,306 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
   }
 }
 
+class $BlockedUserEntriesTable extends BlockedUserEntries
+    with TableInfo<$BlockedUserEntriesTable, BlockedUserEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlockedUserEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _blockedUserIdMeta = const VerificationMeta(
+    'blockedUserId',
+  );
+  @override
+  late final GeneratedColumn<String> blockedUserId = GeneratedColumn<String>(
+    'blocked_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _blockedAtMeta = const VerificationMeta(
+    'blockedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> blockedAt = GeneratedColumn<DateTime>(
+    'blocked_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, blockedUserId, blockedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'blocked_user_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BlockedUserEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('blocked_user_id')) {
+      context.handle(
+        _blockedUserIdMeta,
+        blockedUserId.isAcceptableOrUnknown(
+          data['blocked_user_id']!,
+          _blockedUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_blockedUserIdMeta);
+    }
+    if (data.containsKey('blocked_at')) {
+      context.handle(
+        _blockedAtMeta,
+        blockedAt.isAcceptableOrUnknown(data['blocked_at']!, _blockedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_blockedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BlockedUserEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BlockedUserEntry(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}id'],
+          )!,
+      blockedUserId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}blocked_user_id'],
+          )!,
+      blockedAt:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}blocked_at'],
+          )!,
+    );
+  }
+
+  @override
+  $BlockedUserEntriesTable createAlias(String alias) {
+    return $BlockedUserEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class BlockedUserEntry extends DataClass
+    implements Insertable<BlockedUserEntry> {
+  /// Local row ID (UUID string).
+  final String id;
+
+  /// The blocked user's UUID.
+  final String blockedUserId;
+
+  /// When this user was blocked.
+  final DateTime blockedAt;
+  const BlockedUserEntry({
+    required this.id,
+    required this.blockedUserId,
+    required this.blockedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['blocked_user_id'] = Variable<String>(blockedUserId);
+    map['blocked_at'] = Variable<DateTime>(blockedAt);
+    return map;
+  }
+
+  BlockedUserEntriesCompanion toCompanion(bool nullToAbsent) {
+    return BlockedUserEntriesCompanion(
+      id: Value(id),
+      blockedUserId: Value(blockedUserId),
+      blockedAt: Value(blockedAt),
+    );
+  }
+
+  factory BlockedUserEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BlockedUserEntry(
+      id: serializer.fromJson<String>(json['id']),
+      blockedUserId: serializer.fromJson<String>(json['blockedUserId']),
+      blockedAt: serializer.fromJson<DateTime>(json['blockedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'blockedUserId': serializer.toJson<String>(blockedUserId),
+      'blockedAt': serializer.toJson<DateTime>(blockedAt),
+    };
+  }
+
+  BlockedUserEntry copyWith({
+    String? id,
+    String? blockedUserId,
+    DateTime? blockedAt,
+  }) => BlockedUserEntry(
+    id: id ?? this.id,
+    blockedUserId: blockedUserId ?? this.blockedUserId,
+    blockedAt: blockedAt ?? this.blockedAt,
+  );
+  BlockedUserEntry copyWithCompanion(BlockedUserEntriesCompanion data) {
+    return BlockedUserEntry(
+      id: data.id.present ? data.id.value : this.id,
+      blockedUserId:
+          data.blockedUserId.present
+              ? data.blockedUserId.value
+              : this.blockedUserId,
+      blockedAt: data.blockedAt.present ? data.blockedAt.value : this.blockedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockedUserEntry(')
+          ..write('id: $id, ')
+          ..write('blockedUserId: $blockedUserId, ')
+          ..write('blockedAt: $blockedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, blockedUserId, blockedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BlockedUserEntry &&
+          other.id == this.id &&
+          other.blockedUserId == this.blockedUserId &&
+          other.blockedAt == this.blockedAt);
+}
+
+class BlockedUserEntriesCompanion extends UpdateCompanion<BlockedUserEntry> {
+  final Value<String> id;
+  final Value<String> blockedUserId;
+  final Value<DateTime> blockedAt;
+  final Value<int> rowid;
+  const BlockedUserEntriesCompanion({
+    this.id = const Value.absent(),
+    this.blockedUserId = const Value.absent(),
+    this.blockedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BlockedUserEntriesCompanion.insert({
+    required String id,
+    required String blockedUserId,
+    required DateTime blockedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       blockedUserId = Value(blockedUserId),
+       blockedAt = Value(blockedAt);
+  static Insertable<BlockedUserEntry> custom({
+    Expression<String>? id,
+    Expression<String>? blockedUserId,
+    Expression<DateTime>? blockedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (blockedUserId != null) 'blocked_user_id': blockedUserId,
+      if (blockedAt != null) 'blocked_at': blockedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BlockedUserEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? blockedUserId,
+    Value<DateTime>? blockedAt,
+    Value<int>? rowid,
+  }) {
+    return BlockedUserEntriesCompanion(
+      id: id ?? this.id,
+      blockedUserId: blockedUserId ?? this.blockedUserId,
+      blockedAt: blockedAt ?? this.blockedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (blockedUserId.present) {
+      map['blocked_user_id'] = Variable<String>(blockedUserId.value);
+    }
+    if (blockedAt.present) {
+      map['blocked_at'] = Variable<DateTime>(blockedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockedUserEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('blockedUserId: $blockedUserId, ')
+          ..write('blockedAt: $blockedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ConversationEntriesTable conversationEntries =
       $ConversationEntriesTable(this);
+  late final $BlockedUserEntriesTable blockedUserEntries =
+      $BlockedUserEntriesTable(this);
   late final ConversationDao conversationDao = ConversationDao(
+    this as AppDatabase,
+  );
+  late final BlockedUsersDao blockedUsersDao = BlockedUsersDao(
     this as AppDatabase,
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [conversationEntries];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    conversationEntries,
+    blockedUserEntries,
+  ];
 }
 
 typedef $$ConversationEntriesTableCreateCompanionBuilder =
@@ -912,10 +1199,202 @@ typedef $$ConversationEntriesTableProcessedTableManager =
       ConversationEntry,
       PrefetchHooks Function()
     >;
+typedef $$BlockedUserEntriesTableCreateCompanionBuilder =
+    BlockedUserEntriesCompanion Function({
+      required String id,
+      required String blockedUserId,
+      required DateTime blockedAt,
+      Value<int> rowid,
+    });
+typedef $$BlockedUserEntriesTableUpdateCompanionBuilder =
+    BlockedUserEntriesCompanion Function({
+      Value<String> id,
+      Value<String> blockedUserId,
+      Value<DateTime> blockedAt,
+      Value<int> rowid,
+    });
+
+class $$BlockedUserEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $BlockedUserEntriesTable> {
+  $$BlockedUserEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get blockedUserId => $composableBuilder(
+    column: $table.blockedUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get blockedAt => $composableBuilder(
+    column: $table.blockedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BlockedUserEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $BlockedUserEntriesTable> {
+  $$BlockedUserEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get blockedUserId => $composableBuilder(
+    column: $table.blockedUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get blockedAt => $composableBuilder(
+    column: $table.blockedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BlockedUserEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BlockedUserEntriesTable> {
+  $$BlockedUserEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get blockedUserId => $composableBuilder(
+    column: $table.blockedUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get blockedAt =>
+      $composableBuilder(column: $table.blockedAt, builder: (column) => column);
+}
+
+class $$BlockedUserEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BlockedUserEntriesTable,
+          BlockedUserEntry,
+          $$BlockedUserEntriesTableFilterComposer,
+          $$BlockedUserEntriesTableOrderingComposer,
+          $$BlockedUserEntriesTableAnnotationComposer,
+          $$BlockedUserEntriesTableCreateCompanionBuilder,
+          $$BlockedUserEntriesTableUpdateCompanionBuilder,
+          (
+            BlockedUserEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $BlockedUserEntriesTable,
+              BlockedUserEntry
+            >,
+          ),
+          BlockedUserEntry,
+          PrefetchHooks Function()
+        > {
+  $$BlockedUserEntriesTableTableManager(
+    _$AppDatabase db,
+    $BlockedUserEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$BlockedUserEntriesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer:
+              () => $$BlockedUserEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer:
+              () => $$BlockedUserEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> blockedUserId = const Value.absent(),
+                Value<DateTime> blockedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BlockedUserEntriesCompanion(
+                id: id,
+                blockedUserId: blockedUserId,
+                blockedAt: blockedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String blockedUserId,
+                required DateTime blockedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BlockedUserEntriesCompanion.insert(
+                id: id,
+                blockedUserId: blockedUserId,
+                blockedAt: blockedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BlockedUserEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BlockedUserEntriesTable,
+      BlockedUserEntry,
+      $$BlockedUserEntriesTableFilterComposer,
+      $$BlockedUserEntriesTableOrderingComposer,
+      $$BlockedUserEntriesTableAnnotationComposer,
+      $$BlockedUserEntriesTableCreateCompanionBuilder,
+      $$BlockedUserEntriesTableUpdateCompanionBuilder,
+      (
+        BlockedUserEntry,
+        BaseReferences<
+          _$AppDatabase,
+          $BlockedUserEntriesTable,
+          BlockedUserEntry
+        >,
+      ),
+      BlockedUserEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$ConversationEntriesTableTableManager get conversationEntries =>
       $$ConversationEntriesTableTableManager(_db, _db.conversationEntries);
+  $$BlockedUserEntriesTableTableManager get blockedUserEntries =>
+      $$BlockedUserEntriesTableTableManager(_db, _db.blockedUserEntries);
 }

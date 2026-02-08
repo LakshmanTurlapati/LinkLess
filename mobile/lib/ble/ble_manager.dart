@@ -111,6 +111,10 @@ class BleManager {
   bool _isInitialized = false;
   String _currentUserId = '';
 
+  /// Set of blocked user IDs. Proximity events from these users are
+  /// filtered out before reaching the state machine.
+  Set<String> _blockedUserIds = {};
+
   /// Set of device IDs that have already undergone GATT exchange.
   /// Prevents repeated exchange attempts for the same device in one session.
   final Set<String> _exchangedDeviceIds = {};
@@ -159,6 +163,19 @@ class BleManager {
 
   /// Android background handler (null on non-Android).
   AndroidBackgroundBle? get androidBackgroundBle => _androidBackgroundBle;
+
+  // ---------------------------------------------------------------------------
+  // Blocked Users
+  // ---------------------------------------------------------------------------
+
+  /// Update the set of blocked user IDs.
+  ///
+  /// Proximity events from users in this set are silently dropped
+  /// before reaching the state machine.
+  void updateBlockedUsers(Set<String> blockedIds) {
+    _blockedUserIds = blockedIds;
+    _log('Blocked users updated: ${blockedIds.length} user(s)');
+  }
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -426,6 +443,12 @@ class BleManager {
 
   /// Handle Central discovery events -- feed into state machine.
   void _onDiscovery(BleDiscoveryEvent event) {
+    // Filter blocked users if their user ID is already known
+    final knownUserId = _deviceToUserIdMap[event.deviceId];
+    if (knownUserId != null && _blockedUserIds.contains(knownUserId)) {
+      return;
+    }
+
     // Feed RSSI into the proximity state machine
     _stateMachine.onPeerDiscovered(event.deviceId, event.rssi);
 
@@ -451,6 +474,12 @@ class BleManager {
     _exchangedDeviceIds.add(result.deviceId);
     _deviceToUserIdMap[result.deviceId] = result.peerUserId;
 
+    // Filter blocked users before emitting proximity events
+    if (_blockedUserIds.contains(result.peerUserId)) {
+      _log('Blocked user filtered from exchange: ${_truncateId(result.peerUserId)}');
+      return;
+    }
+
     _proximityController.add(BleProximityEvent(
       peerId: result.peerUserId,
       deviceId: result.deviceId,
@@ -464,6 +493,12 @@ class BleManager {
 
   /// Handle Peripheral peer user ID writes.
   void _onPeripheralExchange(String peerUserId) {
+    // Filter blocked users before emitting proximity events
+    if (_blockedUserIds.contains(peerUserId)) {
+      _log('Blocked user filtered from peripheral exchange: ${_truncateId(peerUserId)}');
+      return;
+    }
+
     _proximityController.add(BleProximityEvent(
       peerId: peerUserId,
       deviceId: '',
