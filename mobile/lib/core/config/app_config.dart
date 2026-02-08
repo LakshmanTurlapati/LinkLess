@@ -12,6 +12,13 @@ class AppConfig {
     defaultValue: 'http://localhost:8000/api/v1',
   );
 
+  /// Mapbox public access token for map rendering.
+  /// Pass via --dart-define=MAPBOX_ACCESS_TOKEN=pk.xxx at build time.
+  static const String mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+    defaultValue: '',
+  );
+
   /// Connection timeout for HTTP requests in milliseconds.
   static const int connectTimeoutMs = 10000;
 
