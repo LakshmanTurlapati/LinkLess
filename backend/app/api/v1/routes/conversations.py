@@ -18,6 +18,7 @@ from app.schemas.conversation import (
     ConversationDetail,
     ConversationResponse,
     MapConversationResponse,
+    SearchResultResponse,
     SummaryResponse,
     TranscriptResponse,
 )
@@ -212,6 +213,55 @@ async def get_map_conversations(
             )
         )
 
+    return results
+
+
+@router.get(
+    "/search",
+    response_model=list[SearchResultResponse],
+)
+async def search_conversations(
+    q: str = Query(
+        ..., min_length=2, max_length=200, description="Search query"
+    ),
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SearchResultResponse]:
+    """Search conversations by person name, topic, or keyword.
+
+    Combines full-text search across transcript content and summary
+    content/key_topics with ILIKE matching on peer display names.
+    Results are ranked by FTS relevance and include snippet highlights.
+    """
+    service = ConversationService(db)
+    rows = await service.search_conversations(
+        user_id=user.id, query=q, limit=limit, offset=offset
+    )
+
+    results: list[SearchResultResponse] = []
+    for row in rows:
+        is_anonymous = row.peer_is_anonymous or False
+        peer_display_name = None if is_anonymous else row.peer_display_name
+        peer_photo_url = None
+        peer_photo_key = getattr(row, "peer_photo_url", None)
+        if not is_anonymous and peer_photo_key:
+            storage = StorageService()
+            peer_photo_url = storage.get_public_url(peer_photo_key)
+
+        results.append(
+            SearchResultResponse(
+                id=row.id,
+                started_at=row.started_at,
+                duration_seconds=row.duration_seconds,
+                peer_display_name=peer_display_name,
+                peer_photo_url=peer_photo_url,
+                peer_is_anonymous=is_anonymous,
+                snippet=row.snippet,
+                rank=float(row.rank) if row.rank else 0.0,
+            )
+        )
     return results
 
 

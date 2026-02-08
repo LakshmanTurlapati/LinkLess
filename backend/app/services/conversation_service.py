@@ -6,8 +6,9 @@ import uuid as uuid_mod
 from typing import Optional
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.conversation import Conversation, Summary, Transcript
 from app.models.user import User
@@ -231,5 +232,87 @@ class ConversationService:
             )
             .order_by(Conversation.started_at)
         )
+        result = await self.db.execute(stmt)
+        return result.all()
+
+    async def search_conversations(
+        self,
+        user_id: uuid_mod.UUID,
+        query: str,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list:
+        """Search conversations by keyword across transcripts, summaries, and peer names.
+
+        Combines PostgreSQL full-text search (@@) on transcript and summary
+        tsvector columns with ILIKE matching on peer display names. Results
+        are ranked by FTS relevance and include ts_headline snippet highlights.
+
+        Args:
+            user_id: The authenticated user's UUID.
+            query: Search query string (parsed via websearch_to_tsquery).
+            limit: Maximum results to return (default 20).
+            offset: Number of results to skip (default 0).
+
+        Returns:
+            List of Row objects with conversation data, peer info, snippet, and rank.
+        """
+        ts_query = func.websearch_to_tsquery("english", query)
+        peer = aliased(User)
+
+        # Rank: sum of transcript and summary FTS relevance scores
+        rank = (
+            func.coalesce(
+                func.ts_rank_cd(Transcript.search_vector, ts_query), 0.0
+            )
+            + func.coalesce(
+                func.ts_rank_cd(Summary.search_vector, ts_query), 0.0
+            )
+        ).label("rank")
+
+        # Headline snippet from transcript content
+        headline = func.ts_headline(
+            "english",
+            func.coalesce(Transcript.content, ""),
+            ts_query,
+            "MaxWords=50, MinWords=10, MaxFragments=2",
+        ).label("snippet")
+
+        stmt = (
+            select(
+                Conversation.id,
+                Conversation.started_at,
+                Conversation.duration_seconds,
+                peer.display_name.label("peer_display_name"),
+                peer.photo_url.label("peer_photo_url"),
+                peer.is_anonymous.label("peer_is_anonymous"),
+                headline,
+                rank,
+            )
+            .outerjoin(
+                Transcript,
+                Transcript.conversation_id == Conversation.id,
+            )
+            .outerjoin(
+                Summary,
+                Summary.conversation_id == Conversation.id,
+            )
+            .outerjoin(
+                peer,
+                Conversation.peer_user_id == peer.id,
+            )
+            .where(
+                Conversation.user_id == user_id,
+                or_(
+                    Transcript.search_vector.bool_op("@@")(ts_query),
+                    Summary.search_vector.bool_op("@@")(ts_query),
+                    peer.display_name.ilike(f"%{query}%"),
+                ),
+            )
+            .order_by(rank.desc(), Conversation.started_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
         result = await self.db.execute(stmt)
         return result.all()

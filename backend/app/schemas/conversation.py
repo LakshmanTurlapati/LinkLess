@@ -81,6 +81,21 @@ class AudioPresignResponse(BaseModel):
     download_url: str
 
 
+class SearchResultResponse(BaseModel):
+    """Response body for a single search result."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    started_at: datetime
+    duration_seconds: Optional[int] = None
+    peer_display_name: Optional[str] = None
+    peer_photo_url: Optional[str] = None
+    peer_is_anonymous: bool = False
+    snippet: Optional[str] = None
+    rank: float = 0.0
+
+
 class MapConversationResponse(BaseModel):
     """Response body for a conversation formatted for map display.
 
