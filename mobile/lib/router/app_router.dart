@@ -13,6 +13,7 @@ import 'package:linkless/features/recording/presentation/views/playback_screen.d
 import 'package:linkless/features/profile/presentation/views/profile_creation_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_edit_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
+import 'package:linkless/features/search/presentation/views/search_screen.dart';
 import 'package:linkless/router/scaffold_with_nav_bar.dart';
 import 'package:linkless/screens/ble_debug_screen.dart';
 
@@ -100,6 +101,12 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/connections',
         builder: (context, state) => const ConnectionsListScreen(),
+      ),
+
+      // Search screen (outside the shell, full-screen focus).
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
       ),
 
       // BLE debug screen (dev tool, outside the shell, no auth required).

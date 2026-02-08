@@ -21,8 +21,12 @@ class ConversationListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Conversations'),
-        actions: const [
-          Padding(
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
+          ),
+          const Padding(
             padding: EdgeInsets.only(right: 16),
             child: RecordingIndicator(),
           ),
