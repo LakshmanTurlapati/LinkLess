@@ -55,4 +55,27 @@ class ConversationDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteConversation(String id) {
     return (delete(conversationEntries)..where((t) => t.id.equals(id))).go();
   }
+
+  /// Get conversations pending upload, oldest first.
+  ///
+  /// Returns conversations where syncStatus is 'pending' and an audio file
+  /// path exists, ordered by startedAt ascending so the oldest are uploaded
+  /// first.
+  Future<List<ConversationEntry>> getPendingUploads() {
+    return (select(conversationEntries)
+          ..where((t) =>
+              t.syncStatus.equals('pending') &
+              t.audioFilePath.isNotNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
+        .get();
+  }
+
+  /// Update the sync status of a conversation by its ID.
+  Future<void> updateSyncStatus(String id, String status) {
+    return (update(conversationEntries)..where((t) => t.id.equals(id))).write(
+      ConversationEntriesCompanion(
+        syncStatus: Value(status),
+      ),
+    );
+  }
 }

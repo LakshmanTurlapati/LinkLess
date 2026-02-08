@@ -35,6 +35,7 @@ dependencies:
   geolocator: ^14.0.2
   path_provider: ^2.1.5
   audio_video_progress_bar: ^2.0.3
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:
