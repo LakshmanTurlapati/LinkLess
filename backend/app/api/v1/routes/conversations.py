@@ -1,10 +1,12 @@
 """Conversation API routes for lifecycle management and audio upload."""
 
+import datetime
 import logging
 import uuid
+from typing import Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -15,6 +17,7 @@ from app.schemas.conversation import (
     ConversationCreate,
     ConversationDetail,
     ConversationResponse,
+    MapConversationResponse,
     SummaryResponse,
     TranscriptResponse,
 )
@@ -150,6 +153,66 @@ async def list_conversations(
     return [
         ConversationResponse.model_validate(conv) for conv in conversations
     ]
+
+
+@router.get(
+    "/map",
+    response_model=list[MapConversationResponse],
+)
+async def get_map_conversations(
+    date: datetime.date = Query(
+        ..., description="Date to filter conversations (YYYY-MM-DD)"
+    ),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[MapConversationResponse]:
+    """Get conversations formatted for map display on a given date.
+
+    Returns conversation pins with GPS coordinates and peer profile
+    info. Anonymous peers have display_name and photo_url masked
+    to None. Conversations without location data are excluded.
+    """
+    service = ConversationService(db)
+    rows = await service.get_map_conversations(user.id, date)
+
+    results: list[MapConversationResponse] = []
+    for row in rows:
+        # Coalesce peer_is_anonymous to False when peer_user_id is NULL
+        is_anonymous: bool = row.peer_is_anonymous or False
+
+        # Derive peer_display_name with anonymous masking
+        peer_display_name: Optional[str] = None
+        if not is_anonymous and row.peer_display_name is not None:
+            peer_display_name = row.peer_display_name
+
+        # Derive initials from the raw display_name (always, even for anonymous)
+        peer_initials: Optional[str] = None
+        if row.peer_display_name is not None:
+            parts = row.peer_display_name.strip().split()
+            peer_initials = "".join(p[0].upper() for p in parts[:2])
+
+        # Construct photo URL with anonymous masking
+        peer_photo_url: Optional[str] = None
+        peer_photo_key: Optional[str] = getattr(row, "peer_photo_key", None)
+        if not is_anonymous and peer_photo_key is not None:
+            storage = StorageService()
+            peer_photo_url = storage.get_public_url(peer_photo_key)
+
+        results.append(
+            MapConversationResponse(
+                id=row.id,
+                latitude=row.latitude,
+                longitude=row.longitude,
+                started_at=row.started_at,
+                duration_seconds=row.duration_seconds,
+                peer_display_name=peer_display_name,
+                peer_initials=peer_initials,
+                peer_photo_url=peer_photo_url,
+                peer_is_anonymous=is_anonymous,
+            )
+        )
+
+    return results
 
 
 @router.get(
