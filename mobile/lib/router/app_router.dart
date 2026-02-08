@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 import 'package:linkless/features/auth/presentation/views/otp_verification_screen.dart';
 import 'package:linkless/features/auth/presentation/views/phone_input_screen.dart';
+import 'package:linkless/features/connections/presentation/views/connections_list_screen.dart';
 import 'package:linkless/features/conversations/presentation/views/conversations_screen.dart';
 import 'package:linkless/features/map/presentation/views/map_screen.dart';
 import 'package:linkless/features/recording/presentation/views/playback_screen.dart';
@@ -93,6 +94,12 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditScreen(),
+      ),
+
+      // Connections list (outside the shell, no bottom nav).
+      GoRoute(
+        path: '/connections',
+        builder: (context, state) => const ConnectionsListScreen(),
       ),
 
       // BLE debug screen (dev tool, outside the shell, no auth required).

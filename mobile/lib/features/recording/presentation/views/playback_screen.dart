@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/features/connections/presentation/providers/connection_provider.dart';
+import 'package:linkless/features/connections/presentation/widgets/connect_prompt_dialog.dart';
 import 'package:linkless/features/recording/domain/models/conversation_local.dart';
 import 'package:linkless/features/recording/presentation/providers/conversation_detail_provider.dart';
 import 'package:linkless/features/recording/presentation/providers/playback_provider.dart';
@@ -76,6 +78,8 @@ class PlaybackScreen extends ConsumerWidget {
             _buildNoAudioMessage(),
           const SizedBox(height: 24),
           _buildTranscriptSummarySection(context, ref, conversation),
+          const SizedBox(height: 24),
+          _buildConnectionSection(context, ref, conversation),
         ],
       ),
     );
@@ -311,6 +315,278 @@ class PlaybackScreen extends ConsumerWidget {
                   ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the connection UI section with two-gate eligibility check.
+  ///
+  /// Gate 1: Conversation must have a peer_user_id AND a completed transcript.
+  /// Gate 2: Connection status determines what UI to show (prompt, chip, etc).
+  Widget _buildConnectionSection(
+    BuildContext context,
+    WidgetRef ref,
+    ConversationLocal conversation,
+  ) {
+    final detail = ref.watch(conversationDetailProvider(conversationId));
+
+    return detail.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        if (data == null) return const SizedBox.shrink();
+
+        // Gate 1: Must have peer_user_id AND transcript
+        final peerUserId = data['peer_user_id'] as String?;
+        final hasTranscript = data['transcript'] != null;
+        if (peerUserId == null || !hasTranscript) {
+          return const SizedBox.shrink();
+        }
+
+        // Extract peer info for the connect prompt
+        final peerDisplayName = data['peer_display_name'] as String?;
+        final peerInitials = data['peer_initials'] as String?;
+        final peerPhotoUrl = data['peer_photo_url'] as String?;
+        final currentUserId = data['user_id'] as String?;
+
+        // Gate 2: Status-based rendering
+        return _buildConnectionStatus(
+          context,
+          ref,
+          peerDisplayName: peerDisplayName,
+          peerInitials: peerInitials,
+          peerPhotoUrl: peerPhotoUrl,
+          currentUserId: currentUserId,
+        );
+      },
+    );
+  }
+
+  /// Renders connection UI based on the current connection status.
+  Widget _buildConnectionStatus(
+    BuildContext context,
+    WidgetRef ref, {
+    String? peerDisplayName,
+    String? peerInitials,
+    String? peerPhotoUrl,
+    String? currentUserId,
+  }) {
+    final connectionStatus =
+        ref.watch(connectionStatusProvider(conversationId));
+
+    return connectionStatus.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (request) {
+        // (a) No request exists: show connect prompt banner
+        if (request == null) {
+          return _buildConnectBanner(
+            context,
+            ref,
+            peerDisplayName: peerDisplayName,
+            peerInitials: peerInitials,
+            peerPhotoUrl: peerPhotoUrl,
+          );
+        }
+
+        // (d) Accepted: show connected chip
+        if (request.isAccepted) {
+          return _buildStatusChip(
+            context,
+            icon: Icons.check_circle,
+            label: 'Connected',
+            color: Colors.green,
+          );
+        }
+
+        // (e) Declined: show nothing
+        if (request.isDeclined) {
+          return const SizedBox.shrink();
+        }
+
+        // (b) Pending and current user is the requester: show sent chip
+        if (request.isPending && currentUserId == request.requesterId) {
+          return _buildStatusChip(
+            context,
+            icon: Icons.send,
+            label: 'Connection request sent',
+            color: Colors.blue,
+          );
+        }
+
+        // (c) Pending and current user is the recipient: show accept/decline
+        if (request.isPending && currentUserId == request.recipientId) {
+          return _buildIncomingRequestCard(
+            context,
+            ref,
+            request.id,
+            peerDisplayName: peerDisplayName,
+            peerInitials: peerInitials,
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  /// Banner card inviting the user to connect with the peer.
+  Widget _buildConnectBanner(
+    BuildContext context,
+    WidgetRef ref, {
+    String? peerDisplayName,
+    String? peerInitials,
+    String? peerPhotoUrl,
+  }) {
+    final name = peerDisplayName ?? peerInitials ?? 'this person';
+    final theme = Theme.of(context);
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          ConnectPromptDialog.show(
+            context,
+            peerDisplayName: peerDisplayName,
+            peerInitials: peerInitials,
+            peerPhotoUrl: peerPhotoUrl,
+            conversationId: conversationId,
+            onAccept: () async {
+              await sendConnectionRequest(ref, conversationId);
+            },
+            onDecline: () {
+              // No action needed -- user just dismissed the prompt.
+              // The prompt won't re-appear because the request will
+              // now exist with status 'pending'.
+            },
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_add,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Connect with $name',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Exchange social links',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Card for incoming connection request with accept/decline buttons.
+  Widget _buildIncomingRequestCard(
+    BuildContext context,
+    WidgetRef ref,
+    String requestId, {
+    String? peerDisplayName,
+    String? peerInitials,
+  }) {
+    final name = peerDisplayName ?? peerInitials ?? 'Someone';
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.person_add,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '$name wants to connect',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Accept to exchange social links',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    await declineConnection(
+                      ref,
+                      requestId,
+                      conversationId: conversationId,
+                    );
+                  },
+                  child: const Text('Decline'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () async {
+                    await acceptConnection(
+                      ref,
+                      requestId,
+                      conversationId: conversationId,
+                    );
+                  },
+                  child: const Text('Accept'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Small status chip for connection state indication.
+  Widget _buildStatusChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Chip(
+          avatar: Icon(icon, size: 18, color: color),
+          label: Text(label),
+          backgroundColor: color.withValues(alpha: 0.1),
+          side: BorderSide.none,
         ),
       ),
     );
