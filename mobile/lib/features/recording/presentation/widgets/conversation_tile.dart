@@ -33,7 +33,14 @@ class ConversationTile extends StatelessWidget {
       subtitle: Text(
         '${_formatDate(conversation.startedAt)} -- ${conversation.displayDuration}',
       ),
-      trailing: _buildStatusIcon(),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSyncStatusIcon(),
+          const SizedBox(width: 8),
+          _buildStatusIcon(),
+        ],
+      ),
       onTap: onTap,
     );
   }
@@ -57,6 +64,53 @@ class ConversationTile extends StatelessWidget {
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
     return '$month ${date.day}, ${date.year} $hour:$minute $period';
+  }
+
+  /// Sync status icon showing the cloud sync state of the conversation:
+  /// - pending: grey cloud upload icon
+  /// - uploading: small blue spinner
+  /// - uploaded: orange cloud done icon (transcription in progress)
+  /// - completed: green check icon
+  /// - failed: red error icon
+  Widget _buildSyncStatusIcon() {
+    switch (conversation.syncStatus) {
+      case 'pending':
+        return const Icon(
+          Icons.cloud_upload_outlined,
+          size: 18,
+          color: Colors.grey,
+        );
+      case 'uploading':
+        return const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.blue,
+          ),
+        );
+      case 'uploaded':
+      case 'transcribing':
+        return const Icon(
+          Icons.cloud_done_outlined,
+          size: 18,
+          color: Colors.orange,
+        );
+      case 'completed':
+        return const Icon(
+          Icons.check_circle_outline,
+          size: 18,
+          color: Colors.green,
+        );
+      case 'failed':
+        return const Icon(
+          Icons.error_outline,
+          size: 18,
+          color: Colors.red,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   /// Status icon based on conversation state:
