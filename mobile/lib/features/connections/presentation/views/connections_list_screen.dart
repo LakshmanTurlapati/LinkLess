@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/connections/presentation/providers/connection_provider.dart';
 import 'package:linkless/features/connections/presentation/widgets/connection_tile.dart';
 
@@ -29,10 +30,10 @@ class ConnectionsListScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 48,
-                  color: Colors.red,
+                  color: AppColors.error,
                 ),
                 const SizedBox(height: 16),
                 Text(

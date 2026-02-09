@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:linkless/ble/ble_manager.dart';
@@ -24,7 +25,8 @@ bool _initializing = false;
 /// 1. Fetch user profile for user ID
 /// 2. Sync blocked users list from backend
 /// 3. Check invisible mode preference
-/// 4. Conditionally initialize and start BLE
+/// 4. Request core permissions (microphone + location)
+/// 5. Conditionally initialize and start BLE
 ///
 /// This provider is side-effect-only (returns void), matching the
 /// pattern used by [syncEngineProvider].
@@ -95,7 +97,19 @@ Future<void> _initializeServices(Ref ref) async {
       return;
     }
 
-    // Step 4: Initialize and start BLE (GAP 1 fix).
+    // Step 4: Request core app permissions (microphone + location).
+    // Requested upfront so the user is prompted immediately after login,
+    // rather than waiting until proximity triggers recording.
+    final corePermissions = await [
+      Permission.microphone,
+      Permission.locationWhenInUse,
+    ].request();
+
+    for (final entry in corePermissions.entries) {
+      debugPrint('[AppInit] ${entry.key}: ${entry.value}');
+    }
+
+    // Step 5: Initialize and start BLE (GAP 1 fix).
     await BleManager.instance.initialize();
     final permissions = await BleManager.instance.requestPermissions();
 

@@ -19,7 +19,7 @@ class LinkLessApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'LinkLess',
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

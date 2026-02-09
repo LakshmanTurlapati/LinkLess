@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
+
 /// Displays a conversation transcript with speaker-labeled utterances.
 ///
 /// Parses the transcript content field (a JSON string of utterances) and
@@ -43,9 +45,9 @@ class TranscriptWidget extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const Divider(),
-              const Text(
+              Text(
                 'No transcript available',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -69,7 +71,7 @@ class TranscriptWidget extends StatelessWidget {
             Text(
               'Transcribed by $provider',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
             ),
           ],
@@ -140,7 +142,7 @@ class TranscriptWidget extends StatelessWidget {
                 Text(
                   '${_formatTime(start)} - ${_formatTime(end)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.textTertiary,
                       ),
                 ),
               ],

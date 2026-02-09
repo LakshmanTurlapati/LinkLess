@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 
 /// Screen where users enter their phone number to receive an OTP.
@@ -67,28 +68,63 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Spacer(flex: 2),
+                const Spacer(flex: 3),
+
+                // App logo
+                Center(
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          '../assets/app icon.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Login heading
                 Text(
-                  'Welcome to LinkLess',
+                  'Login',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enter your phone number to get started',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[600],
+                        color: AppColors.textPrimary,
                       ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
+
+                // Phone input with pill shape
                 PhoneFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: AppColors.inputBackground,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(
+                        color: AppColors.accentPurple,
+                        width: 2,
+                      ),
+                    ),
                   ),
                   countrySelectorNavigator:
                       const CountrySelectorNavigator.modalBottomSheet(),
@@ -99,6 +135,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                   enabled: !isLoading,
                 ),
                 const SizedBox(height: 24),
+
                 FilledButton(
                   onPressed: isLoading ? null : _onContinue,
                   child: Padding(
@@ -115,7 +152,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                         : const Text('Continue'),
                   ),
                 ),
-                const Spacer(flex: 3),
+                const Spacer(flex: 4),
               ],
             ),
           ),

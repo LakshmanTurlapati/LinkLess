@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 import 'package:linkless/features/recording/presentation/widgets/conversation_tile.dart';
 import 'package:linkless/features/recording/presentation/widgets/recording_indicator.dart';
@@ -35,21 +36,21 @@ class ConversationListScreen extends ConsumerWidget {
       body: conversationList.when(
         data: (conversations) {
           if (conversations.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.chat_bubble_outline,
                     size: 64,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
                   SizedBox(height: 16),
                   Text(
                     'No conversations yet',
                     style: TextStyle(
                       fontSize: 18,
-                      color: Colors.grey,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                   SizedBox(height: 8),
@@ -58,7 +59,7 @@ class ConversationListScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -88,10 +89,10 @@ class ConversationListScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 48,
-                  color: Colors.red,
+                  color: AppColors.error,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -102,7 +103,7 @@ class ConversationListScreen extends ConsumerWidget {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],
             ),

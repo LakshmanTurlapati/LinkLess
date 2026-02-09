@@ -4,6 +4,8 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
+
 /// A self-contained audio player widget with play/pause, seek bar, and skip
 /// controls.
 ///
@@ -95,7 +97,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         child: Center(
           child: Text(
             'Failed to load audio file',
-            style: TextStyle(color: Colors.red),
+            style: TextStyle(color: AppColors.error),
           ),
         ),
       );

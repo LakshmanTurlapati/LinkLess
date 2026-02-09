@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 
-/// Screen where users enter the 6-digit OTP sent to their phone.
+/// Screen where users enter the 4-digit OTP sent to their phone.
 ///
 /// Features:
 /// - Pinput widget with SMS autofill support
@@ -97,13 +98,16 @@ class _OtpVerificationScreenState
     final defaultPinTheme = PinTheme(
       width: 48,
       height: 56,
-      textStyle: Theme.of(context).textTheme.headlineSmall,
+      textStyle: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: AppColors.backgroundDark,
+          ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _errorText != null
-              ? Theme.of(context).colorScheme.error
-              : Colors.grey[400]!,
+              ? AppColors.error
+              : AppColors.border,
         ),
       ),
     );
@@ -128,9 +132,9 @@ class _OtpVerificationScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                'We sent a 6-digit code to\n$_maskedPhone',
+                'We sent a 4-digit code to\n$_maskedPhone',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey[600],
+                      color: AppColors.textSecondary,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -139,13 +143,14 @@ class _OtpVerificationScreenState
                 child: Pinput(
                   controller: _pinController,
                   focusNode: _focusNode,
-                  length: 6,
+                  length: 4,
                   defaultPinTheme: defaultPinTheme,
                   focusedPinTheme: defaultPinTheme.copyWith(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.inputBackground,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: AppColors.accentPurple,
                         width: 2,
                       ),
                     ),
@@ -153,15 +158,14 @@ class _OtpVerificationScreenState
                   enabled: !isLoading,
                   autofocus: true,
                   onCompleted: (pin) => _onVerify(pin),
-                  // SMS autofill enabled by default via autofillHints: [AutofillHints.oneTimeCode]
                 ),
               ),
               if (_errorText != null) ...[
                 const SizedBox(height: 12),
                 Text(
                   _errorText!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
+                  style: const TextStyle(
+                    color: AppColors.error,
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
@@ -172,7 +176,7 @@ class _OtpVerificationScreenState
                 const Center(child: CircularProgressIndicator())
               else
                 FilledButton(
-                  onPressed: _pinController.text.length == 6
+                  onPressed: _pinController.text.length == 4
                       ? () => _onVerify(_pinController.text)
                       : null,
                   child: const Padding(

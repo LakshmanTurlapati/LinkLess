@@ -10,6 +10,7 @@ import 'package:linkless/features/connections/presentation/views/connections_lis
 import 'package:linkless/features/conversations/presentation/views/conversations_screen.dart';
 import 'package:linkless/features/map/presentation/views/map_screen.dart';
 import 'package:linkless/features/recording/presentation/views/playback_screen.dart';
+import 'package:linkless/features/profile/presentation/views/encounter_card_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_creation_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_edit_screen.dart';
 import 'package:linkless/features/profile/presentation/views/profile_screen.dart';
@@ -108,6 +109,14 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/search',
         builder: (context, state) => const SearchScreen(),
+      ),
+
+      // Encounter card (view another user's profile, outside the shell).
+      GoRoute(
+        path: '/profile/encounter/:userId',
+        builder: (context, state) => EncounterCardScreen(
+          userId: state.pathParameters['userId'] ?? '',
+        ),
       ),
 
       // BLE debug screen (dev tool, outside the shell, no auth required).

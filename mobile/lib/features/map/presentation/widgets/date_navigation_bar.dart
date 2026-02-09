@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/map/presentation/providers/date_navigation_provider.dart';
 
 /// A horizontal bar with left/right chevron arrows and a date label.
@@ -26,16 +27,22 @@ class DateNavigationBar extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left, color: AppColors.textPrimary),
             onPressed: () => notifier.goToPreviousDay(),
             tooltip: 'Previous day',
           ),
           Text(
             _formatDateLabel(selectedDate),
-            style: Theme.of(context).textTheme.titleMedium,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: Icon(
+              Icons.chevron_right,
+              color: canGoForward ? AppColors.textPrimary : AppColors.textTertiary,
+            ),
             onPressed: canGoForward ? () => notifier.goToNextDay() : null,
             tooltip: 'Next day',
           ),

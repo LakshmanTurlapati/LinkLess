@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
 import 'package:linkless/features/profile/presentation/widgets/avatar_picker.dart';
 
@@ -70,7 +71,7 @@ class _ProfileCreationScreenState
                 Text(
                   'Add a name and photo so others can recognize you.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -87,14 +88,30 @@ class _ProfileCreationScreenState
                 ),
                 const SizedBox(height: 32),
 
-                // Display name field (required)
+                // Display name field (required) -- pill-shaped
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Display Name',
                     hintText: 'Enter your name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person_outline),
+                    filled: true,
+                    fillColor: AppColors.inputBackground,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(
+                        color: AppColors.accentPurple,
+                        width: 2,
+                      ),
+                    ),
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.done,

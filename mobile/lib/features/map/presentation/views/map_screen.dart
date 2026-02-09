@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import 'package:linkless/core/config/app_config.dart';
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/map/data/services/marker_image_service.dart';
 import 'package:linkless/features/map/domain/models/map_conversation.dart';
 import 'package:linkless/features/map/presentation/providers/date_navigation_provider.dart';
@@ -51,6 +52,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   static const String _clusterCirclesLayerId = 'cluster-circles';
   static const String _clusterCountLayerId = 'cluster-count';
   static const String _unclusteredPointLayerId = 'unclustered-point';
+  static const String _durationLabelLayerId = 'duration-labels';
 
   /// Whether the Mapbox access token has been configured.
   bool _tokenConfigured = false;
@@ -203,6 +205,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (_currentRenderMode == _RenderMode.cluster) {
       final style = _mapboxMap!.style;
       try {
+        await style.removeStyleLayer(_durationLabelLayerId);
+      } catch (_) {}
+      try {
         await style.removeStyleLayer(_clusterCountLayerId);
       } catch (_) {}
       try {
@@ -290,6 +295,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               'properties': {
                 'conversationId': c.id,
                 'peerName': c.peerDisplayName ?? 'Unknown',
+                'duration': c.displayDuration,
               },
             })
         .toList();
@@ -312,17 +318,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     );
 
-    // Layer 1: Cluster circles (grouped points)
+    // Layer 1: Cluster circles (grouped points) -- white with glow
     await style.addLayer(
       CircleLayer(
         id: _clusterCirclesLayerId,
         sourceId: _clusterSourceId,
         filter: ['has', 'point_count'],
-        circleColor: const Color(0xFF2196F3).value,
+        circleColor: Colors.white.value,
         circleRadius: 18.0,
-        circleOpacity: 0.8,
+        circleOpacity: 0.85,
+        circleBlur: 0.6,
         circleStrokeWidth: 2.0,
-        circleStrokeColor: Colors.white.value,
+        circleStrokeColor: AppColors.accentPurple.value,
       ),
     );
 
@@ -334,11 +341,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         filter: ['has', 'point_count'],
         textFieldExpression: ['get', 'point_count_abbreviated'],
         textSize: 12.0,
-        textColor: Colors.white.value,
+        textColor: AppColors.backgroundDark.value,
       ),
     );
 
-    // Layer 3: Unclustered individual points
+    // Layer 3: Unclustered individual points -- white with glow
     await style.addLayer(
       CircleLayer(
         id: _unclusteredPointLayerId,
@@ -347,10 +354,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           '!',
           ['has', 'point_count'],
         ],
-        circleColor: const Color(0xFF2196F3).value,
-        circleRadius: 8.0,
+        circleColor: Colors.white.value,
+        circleRadius: 10.0,
+        circleOpacity: 0.85,
+        circleBlur: 0.6,
         circleStrokeWidth: 2.0,
-        circleStrokeColor: Colors.white.value,
+        circleStrokeColor: AppColors.accentPurple.value,
+      ),
+    );
+
+    // Layer 4: Duration labels below unclustered points
+    await style.addLayer(
+      SymbolLayer(
+        id: _durationLabelLayerId,
+        sourceId: _clusterSourceId,
+        filter: [
+          '!',
+          ['has', 'point_count'],
+        ],
+        textFieldExpression: ['get', 'duration'],
+        textSize: 10.0,
+        textColor: Colors.white.value,
+        textOffset: [0.0, 1.8],
+        textHaloColor: AppColors.backgroundDark.value,
+        textHaloWidth: 1.0,
       ),
     );
 
@@ -434,90 +461,102 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final hasError = conversationsAsync.hasError;
 
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          SafeArea(
-            bottom: false,
-            child: const DateNavigationBar(),
+          // Full-screen map as base
+          _tokenConfigured
+              ? _buildMap()
+              : const Center(child: CircularProgressIndicator()),
+
+          // Top overlay: DateNavigationBar on semi-transparent dark bg
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.backgroundDark.withOpacity(0.9),
+                    AppColors.backgroundDark.withOpacity(0.0),
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: const DateNavigationBar(),
+              ),
+            ),
           ),
-          Expanded(
-            child: _tokenConfigured
-                ? Stack(
-                    children: [
-                      _buildMap(),
 
-                      // Loading indicator overlay
-                      if (isLoading)
-                        const Positioned(
-                          top: 8,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        ),
+          // Loading indicator overlay
+          if (isLoading)
+            const Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
 
-                      // Empty state overlay
-                      if (!isLoading && !hasError && conversations.isEmpty)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'No conversations on this date',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      // Error overlay
-                      if (hasError)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'Failed to load conversations',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  )
-                : const Center(
-                    child: CircularProgressIndicator(),
+          // Empty state overlay
+          if (!isLoading && !hasError && conversations.isEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundCard.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'No conversations on this date',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-          ),
+                ),
+              ),
+            ),
+
+          // Error overlay
+          if (hasError)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Failed to load conversations',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -526,33 +565,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Builds the Mapbox [MapWidget] centered on San Francisco at zoom 12.
   Widget _buildMap() {
     if (AppConfig.mapboxAccessToken.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.map_outlined,
                 size: 64,
-                color: Colors.grey,
+                color: AppColors.textTertiary,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
                 'Mapbox access token not configured.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey,
+                  color: AppColors.textSecondary,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Pass --dart-define=MAPBOX_ACCESS_TOKEN=pk.xxx when building.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey,
+                  color: AppColors.textTertiary,
                 ),
               ),
             ],
@@ -562,6 +601,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     return MapWidget(
+      styleUri: 'mapbox://styles/mapbox/dark-v11',
       cameraOptions: CameraOptions(
         center: Point(coordinates: Position(-122.4194, 37.7749)),
         zoom: 12.0,

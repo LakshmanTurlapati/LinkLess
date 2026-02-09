@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
+
 /// Displays a conversation summary with key topic chips.
 ///
 /// Parses the summary response from the API and renders the summary text
@@ -33,9 +35,9 @@ class SummaryWidget extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const Divider(),
-              const Text(
+              Text(
                 'No summary available',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -62,7 +64,7 @@ class SummaryWidget extends StatelessWidget {
               Text(
                 'Key Topics',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
+                      color: AppColors.textSecondary,
                     ),
               ),
               const SizedBox(height: 6),
@@ -78,7 +80,7 @@ class SummaryWidget extends StatelessWidget {
             Text(
               'Summarized by $provider',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
             ),
           ],

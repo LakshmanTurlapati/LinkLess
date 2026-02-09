@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
+
 /// Navigation shell widget that provides the bottom NavigationBar.
 ///
 /// Receives the [StatefulNavigationShell] from GoRouter's
@@ -20,6 +22,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
+        backgroundColor: AppColors.backgroundDarker,
+        indicatorColor: AppColors.accentPurple.withOpacity(0.15),
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (int index) {
           navigationShell.goBranch(
@@ -29,18 +33,18 @@ class ScaffoldWithNavBar extends StatelessWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
+            icon: Icon(Icons.chat_bubble_outline, color: AppColors.textTertiary),
+            selectedIcon: Icon(Icons.chat_bubble, color: AppColors.accentPurple),
             label: 'Conversations',
           ),
           NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
+            icon: Icon(Icons.map_outlined, color: AppColors.textTertiary),
+            selectedIcon: Icon(Icons.map, color: AppColors.accentPurple),
             label: 'Map',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline, color: AppColors.textTertiary),
+            selectedIcon: Icon(Icons.person, color: AppColors.accentPurple),
             label: 'Profile',
           ),
         ],

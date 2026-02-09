@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/profile/domain/models/social_link.dart';
 
 /// A single row for editing a social media handle.
@@ -29,8 +30,6 @@ class SocialLinkTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -40,7 +39,7 @@ class SocialLinkTile extends StatelessWidget {
             width: 40,
             child: Icon(
               platform.iconData,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(width: 8),
@@ -49,11 +48,28 @@ class SocialLinkTile extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              style: const TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 labelText: platform.displayName,
                 hintText: '@username',
                 prefixText: '@ ',
-                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: AppColors.backgroundCard,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(
+                    color: AppColors.accentPurple,
+                    width: 2,
+                  ),
+                ),
                 isDense: true,
               ),
               onChanged: (value) {

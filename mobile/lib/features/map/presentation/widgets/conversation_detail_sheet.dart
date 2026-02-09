@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/map/domain/models/map_conversation.dart';
 import 'package:linkless/features/recording/presentation/providers/conversation_detail_provider.dart';
 import 'package:linkless/features/recording/presentation/widgets/summary_widget.dart';
@@ -46,7 +47,7 @@ class ConversationDetailSheet extends ConsumerWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey[400],
+                    color: AppColors.textTertiary,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -82,8 +83,8 @@ class ConversationDetailSheet extends ConsumerWidget {
         CircleAvatar(
           radius: 24,
           backgroundColor: conversation.peerIsAnonymous
-              ? Colors.grey
-              : Colors.blue[300],
+              ? AppColors.textTertiary
+              : AppColors.accentPurple,
           backgroundImage: (!conversation.peerIsAnonymous &&
                   conversation.peerPhotoUrl != null &&
                   conversation.peerPhotoUrl!.isNotEmpty)
@@ -95,7 +96,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               ? Text(
                   initialsText,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -117,7 +118,7 @@ class ConversationDetailSheet extends ConsumerWidget {
                 Text(
                   'Anonymous',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.textTertiary,
                       ),
                 ),
             ],
@@ -131,21 +132,21 @@ class ConversationDetailSheet extends ConsumerWidget {
   Widget _buildMetadataRow(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+        const Icon(Icons.access_time, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 4),
         Text(
           _formatDateTime(conversation.startedAt),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
         ),
         const SizedBox(width: 16),
-        Icon(Icons.timer_outlined, size: 16, color: Colors.grey[600]),
+        const Icon(Icons.timer_outlined, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 4),
         Text(
           conversation.displayDuration,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: AppColors.textSecondary,
               ),
         ),
       ],
@@ -170,7 +171,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               SizedBox(height: 12),
               Text(
                 'Loading details...',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textTertiary),
               ),
             ],
           ),
@@ -183,7 +184,7 @@ class ConversationDetailSheet extends ConsumerWidget {
             children: [
               const Text(
                 'Could not load conversation details',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: AppColors.error),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -203,7 +204,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text(
                 'No details available',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textTertiary),
               ),
             ),
           );
@@ -218,7 +219,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text(
                 'Transcript and summary not yet available',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textTertiary),
               ),
             ),
           );

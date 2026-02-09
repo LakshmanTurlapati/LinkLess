@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
+
 /// Renders circular face-pin marker images as PNG [Uint8List] for use as
 /// Mapbox PointAnnotation icons.
 ///
@@ -16,10 +18,13 @@ import 'package:flutter/material.dart';
 class MarkerImageService {
   MarkerImageService._();
 
-  /// Renders a circular face-pin marker image.
+  /// Extra padding around the pin for the glow effect.
+  static const double _glowPadding = 12.0;
+
+  /// Renders a circular face-pin marker image with a glow effect.
   ///
   /// Returns a PNG-encoded [Uint8List] suitable for Mapbox PointAnnotation
-  /// image data. The image is [size] x [size] pixels.
+  /// image data. The image is ([size] + glow padding) x ([size] + glow padding) pixels.
   ///
   /// - [photoUrl]: URL to the peer's profile photo (downloaded and cropped).
   /// - [initials]: Fallback text rendered when no photo is available.
@@ -32,14 +37,24 @@ class MarkerImageService {
     bool isAnonymous = false,
     double size = 64.0,
   }) async {
+    final totalSize = size + _glowPadding;
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
-    final center = Offset(size / 2, size / 2);
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, totalSize, totalSize));
+    final center = Offset(totalSize / 2, totalSize / 2);
     final radius = size / 2;
 
     // Border width
     const borderWidth = 3.0;
     final innerRadius = radius - borderWidth;
+
+    // Draw glow ring
+    canvas.drawCircle(
+      center,
+      radius + 6,
+      Paint()
+        ..color = const Color(0x80FFFFFF)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+    );
 
     // Try to load photo for non-anonymous peers
     ui.Image? photo;
@@ -77,7 +92,7 @@ class MarkerImageService {
         center,
         radius - borderWidth / 2,
         Paint()
-          ..color = const Color(0xFF2196F3) // Blue border
+          ..color = AppColors.accentPurple
           ..style = PaintingStyle.stroke
           ..strokeWidth = borderWidth,
       );
@@ -86,7 +101,7 @@ class MarkerImageService {
       final isUnknown = isAnonymous || (initials == null || initials.isEmpty);
       final bgColor = isUnknown
           ? const Color(0xFF9E9E9E) // Grey for unknown/anonymous
-          : const Color(0xFF42A5F5); // Light blue for known peers
+          : AppColors.accentPurple; // Purple for known peers
 
       // Draw filled background circle
       canvas.drawCircle(
@@ -119,7 +134,7 @@ class MarkerImageService {
         ..addText(displayText);
 
       final paragraph = paragraphBuilder.build()
-        ..layout(ui.ParagraphConstraints(width: size));
+        ..layout(ui.ParagraphConstraints(width: totalSize));
 
       final textOffset = Offset(
         0,
@@ -140,7 +155,7 @@ class MarkerImageService {
 
     // Convert to PNG bytes
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
+    final image = await picture.toImage(totalSize.toInt(), totalSize.toInt());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
     if (byteData == null) {

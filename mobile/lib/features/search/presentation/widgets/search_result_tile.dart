@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/search/domain/models/search_result.dart';
 
 /// A list tile displaying a single search result.
@@ -37,7 +38,7 @@ class SearchResultTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade700,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
@@ -45,7 +46,7 @@ class SearchResultTile extends StatelessWidget {
             '${_formatDate(result.startedAt)} -- ${result.displayDuration}',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade500,
+              color: AppColors.textTertiary,
             ),
           ),
         ],

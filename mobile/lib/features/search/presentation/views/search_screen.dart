@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/search/presentation/providers/search_provider.dart';
 import 'package:linkless/features/search/presentation/widgets/search_result_tile.dart';
 
@@ -75,21 +76,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   ) {
     // Show hint when query is too short.
     if (query.trim().length < 2) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.search,
               size: 64,
-              color: Colors.grey,
+              color: AppColors.textSecondary,
             ),
             SizedBox(height: 16),
             Text(
               'Search by person, topic, or keyword',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey,
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -104,18 +105,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.search_off,
                   size: 64,
-                  color: Colors.grey,
+                  color: AppColors.textSecondary,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'No conversations found for "$query"',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -152,10 +153,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 48,
-                  color: Colors.red,
+                  color: AppColors.error,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -166,7 +167,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textTertiary),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

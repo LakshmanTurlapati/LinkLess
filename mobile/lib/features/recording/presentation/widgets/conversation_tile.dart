@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/recording/domain/models/conversation_local.dart';
 
 /// A list tile displaying a conversation summary.
@@ -20,6 +21,7 @@ class ConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
+        backgroundColor: AppColors.accentPurple,
         child: Text(
           conversation.peerId.isNotEmpty
               ? conversation.peerId[0].toUpperCase()
@@ -75,38 +77,38 @@ class ConversationTile extends StatelessWidget {
   Widget _buildSyncStatusIcon() {
     switch (conversation.syncStatus) {
       case 'pending':
-        return const Icon(
+        return Icon(
           Icons.cloud_upload_outlined,
           size: 18,
-          color: Colors.grey,
+          color: AppColors.textSecondary,
         );
       case 'uploading':
-        return const SizedBox(
+        return SizedBox(
           width: 16,
           height: 16,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: Colors.blue,
+            color: AppColors.accentPurple,
           ),
         );
       case 'uploaded':
       case 'transcribing':
-        return const Icon(
+        return Icon(
           Icons.cloud_done_outlined,
           size: 18,
-          color: Colors.orange,
+          color: AppColors.warning,
         );
       case 'completed':
-        return const Icon(
+        return Icon(
           Icons.check_circle_outline,
           size: 18,
-          color: Colors.green,
+          color: AppColors.success,
         );
       case 'failed':
-        return const Icon(
+        return Icon(
           Icons.error_outline,
           size: 18,
-          color: Colors.red,
+          color: AppColors.error,
         );
       default:
         return const SizedBox.shrink();
@@ -119,19 +121,19 @@ class ConversationTile extends StatelessWidget {
   /// - Orange warning if completed without audio
   Widget _buildStatusIcon() {
     if (conversation.isComplete && conversation.hasAudio) {
-      return const Icon(Icons.play_circle_outline, color: Colors.green);
+      return Icon(Icons.play_circle_outline, color: AppColors.success);
     }
     if (!conversation.isComplete) {
       return Container(
         width: 12,
         height: 12,
-        decoration: const BoxDecoration(
-          color: Colors.red,
+        decoration: BoxDecoration(
+          color: AppColors.error,
           shape: BoxShape.circle,
         ),
       );
     }
     // Completed but no audio
-    return const Icon(Icons.warning_amber_rounded, color: Colors.orange);
+    return Icon(Icons.warning_amber_rounded, color: AppColors.warning);
   }
 }

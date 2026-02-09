@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/connections/presentation/providers/connection_provider.dart';
 import 'package:linkless/features/connections/presentation/widgets/connect_prompt_dialog.dart';
 import 'package:linkless/features/recording/domain/models/conversation_local.dart';
@@ -133,7 +134,7 @@ class PlaybackScreen extends ConsumerWidget {
               label,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey,
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -155,7 +156,7 @@ class PlaybackScreen extends ConsumerWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
+            color: AppColors.textSecondary,
           ),
         ),
         const SizedBox(height: 8),
@@ -176,12 +177,12 @@ class PlaybackScreen extends ConsumerWidget {
             Icon(
               Icons.mic_off,
               size: 48,
-              color: Colors.grey,
+              color: AppColors.textSecondary,
             ),
             SizedBox(height: 12),
             Text(
               'No audio recorded for this conversation',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -212,7 +213,7 @@ class PlaybackScreen extends ConsumerWidget {
               SizedBox(height: 12),
               Text(
                 'Loading transcript...',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -223,9 +224,9 @@ class PlaybackScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
             children: [
-              const Text(
+              Text(
                 'Could not load transcript',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: AppColors.error),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -281,24 +282,24 @@ class PlaybackScreen extends ConsumerWidget {
       case 'uploading':
         message = 'Uploading audio...';
         icon = Icons.cloud_upload_outlined;
-        color = Colors.blue;
+        color = AppColors.accentPurple;
       case 'uploaded':
       case 'transcribing':
         message = 'Transcribing conversation...';
         icon = Icons.hearing;
-        color = Colors.orange;
+        color = AppColors.warning;
       case 'completed':
         message = 'Processing complete';
         icon = Icons.check_circle_outline;
-        color = Colors.green;
+        color = AppColors.success;
       case 'failed':
         message = 'Processing failed';
         icon = Icons.error_outline;
-        color = Colors.red;
+        color = AppColors.error;
       default:
         message = 'Waiting to sync...';
         icon = Icons.hourglass_empty;
-        color = Colors.grey;
+        color = AppColors.textSecondary;
     }
 
     return Center(
@@ -396,7 +397,7 @@ class PlaybackScreen extends ConsumerWidget {
             context,
             icon: Icons.check_circle,
             label: 'Connected',
-            color: Colors.green,
+            color: AppColors.success,
           );
         }
 
@@ -411,7 +412,7 @@ class PlaybackScreen extends ConsumerWidget {
             context,
             icon: Icons.send,
             label: 'Connection request sent',
-            color: Colors.blue,
+            color: AppColors.accentPurple,
           );
         }
 

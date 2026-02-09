@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/recording/domain/models/recording_state.dart';
 import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 
@@ -21,12 +22,12 @@ class RecordingIndicator extends ConsumerWidget {
         switch (state) {
           case RecordingState.recording:
             return _buildIndicator(
-              color: Colors.red,
+              color: AppColors.error,
               label: 'Recording',
             );
           case RecordingState.error:
             return _buildIndicator(
-              color: Colors.orange,
+              color: AppColors.warning,
               label: 'Error',
             );
           case RecordingState.idle:

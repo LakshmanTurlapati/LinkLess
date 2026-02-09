@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/profile/domain/models/social_link.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
 import 'package:linkless/features/profile/presentation/widgets/anonymous_mode_toggle.dart';
@@ -124,14 +125,30 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Display name field
+                      // Display name field -- pill-shaped
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Display Name',
                           hintText: 'Enter your name',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person_outline),
+                          filled: true,
+                          fillColor: AppColors.inputBackground,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(
+                              color: AppColors.accentPurple,
+                              width: 2,
+                            ),
+                          ),
+                          prefixIcon: const Icon(Icons.person_outline),
                         ),
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.next,
@@ -157,7 +174,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       Text(
                         'Add your social handles so connections can find you.',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 12),
