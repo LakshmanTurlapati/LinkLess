@@ -15,7 +15,7 @@ class ConnectionApiService {
   /// Returns the created (or existing) connection request data.
   Future<Map<String, dynamic>> createRequest(String conversationId) async {
     final response = await _dio.post(
-      'api/v1/connections/request',
+      '/connections/request',
       data: {'conversation_id': conversationId},
     );
     return response.data as Map<String, dynamic>;
@@ -27,7 +27,7 @@ class ConnectionApiService {
   /// Returns the updated request data (may include exchanged links if mutual).
   Future<Map<String, dynamic>> acceptRequest(String requestId) async {
     final response = await _dio.post(
-      'api/v1/connections/$requestId/accept',
+      '/connections/$requestId/accept',
     );
     return response.data as Map<String, dynamic>;
   }
@@ -37,7 +37,7 @@ class ConnectionApiService {
   /// POST /api/v1/connections/{id}/decline
   Future<void> declineRequest(String requestId) async {
     await _dio.post(
-      'api/v1/connections/$requestId/decline',
+      '/connections/$requestId/decline',
     );
   }
 
@@ -50,7 +50,7 @@ class ConnectionApiService {
   ) async {
     try {
       final response = await _dio.get(
-        'api/v1/connections/status',
+        '/connections/status',
         queryParameters: {'conversation_id': conversationId},
       );
       return response.data as Map<String, dynamic>;
@@ -66,7 +66,7 @@ class ConnectionApiService {
   ///
   /// GET /api/v1/connections
   Future<List<Map<String, dynamic>>> listConnections() async {
-    final response = await _dio.get('api/v1/connections');
+    final response = await _dio.get('/connections');
     final list = response.data as List<dynamic>;
     return list.map((e) => e as Map<String, dynamic>).toList();
   }
@@ -75,7 +75,7 @@ class ConnectionApiService {
   ///
   /// GET /api/v1/connections/pending
   Future<List<Map<String, dynamic>>> listPending() async {
-    final response = await _dio.get('api/v1/connections/pending');
+    final response = await _dio.get('/connections/pending');
     final list = response.data as List<dynamic>;
     return list.map((e) => e as Map<String, dynamic>).toList();
   }
@@ -85,7 +85,7 @@ class ConnectionApiService {
   /// POST /api/v1/connections/block
   Future<void> blockUser(String userId) async {
     await _dio.post(
-      'api/v1/connections/block',
+      '/connections/block',
       data: {'blocked_id': userId},
     );
   }
@@ -94,7 +94,7 @@ class ConnectionApiService {
   ///
   /// DELETE /api/v1/connections/block/{userId}
   Future<void> unblockUser(String userId) async {
-    await _dio.delete('api/v1/connections/block/$userId');
+    await _dio.delete('/connections/block/$userId');
   }
 
   /// Lists all blocked user IDs for local cache sync.
@@ -102,7 +102,7 @@ class ConnectionApiService {
   /// GET /api/v1/connections/blocked
   /// Returns a list of blocked user ID strings.
   Future<List<String>> listBlocked() async {
-    final response = await _dio.get('api/v1/connections/blocked');
+    final response = await _dio.get('/connections/blocked');
     final list = response.data as List<dynamic>;
     return list.map((e) => e.toString()).toList();
   }

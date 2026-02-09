@@ -1,8 +1,8 @@
-"""Multi-provider transcription service with Deepgram primary and OpenAI fallback.
+"""Whisper-based transcription service.
 
-Transcribes audio files from presigned URLs with speaker diarization.
-Deepgram Nova-3 is the primary provider. If Deepgram fails for any reason,
-falls back to OpenAI gpt-4o-transcribe.
+Transcribes audio files from presigned URLs using OpenAI Whisper (whisper-1).
+No speaker diarization -- all segments are assigned speaker=0.
+Speaker prediction is handled downstream by the summarization service.
 """
 
 import asyncio
@@ -10,7 +10,6 @@ import logging
 from dataclasses import dataclass, field
 
 import httpx
-from deepgram import DeepgramClient
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class TranscriptionResult:
         utterances: List of dicts, each with speaker (int), text (str),
             start (float), end (float), confidence (float).
         full_text: The complete transcript as a single string.
-        provider: Which provider produced this result ("deepgram" or "openai").
+        provider: Which provider produced this result.
         language: Detected or requested language code.
         word_count: Number of words in full_text.
     """
@@ -40,21 +39,21 @@ class TranscriptionResult:
 
 
 class TranscriptionService:
-    """Transcribes audio using Deepgram Nova-3 with OpenAI fallback.
+    """Transcribes audio using OpenAI Whisper (whisper-1).
 
     Usage:
-        service = TranscriptionService(deepgram_key, openai_key)
+        service = TranscriptionService(openai_api_key)
         result = await service.transcribe(audio_url)
     """
 
-    def __init__(self, deepgram_api_key: str, openai_api_key: str) -> None:
-        self._deepgram_key = deepgram_api_key
+    def __init__(self, openai_api_key: str) -> None:
         self._openai_key = openai_api_key
 
     async def transcribe(self, audio_url: str) -> TranscriptionResult:
-        """Transcribe audio from a presigned URL.
+        """Transcribe audio from a presigned URL using Whisper.
 
-        Tries Deepgram Nova-3 first. On any exception, falls back to OpenAI.
+        Downloads the audio, then sends it to OpenAI Whisper for transcription.
+        Returns segments with timestamps but no speaker diarization (all speaker=0).
 
         Args:
             audio_url: Presigned URL pointing to the audio file.
@@ -63,101 +62,7 @@ class TranscriptionService:
             TranscriptionResult with utterances, full text, and metadata.
 
         Raises:
-            Exception: If both providers fail.
-        """
-        try:
-            result = await self._transcribe_deepgram(audio_url)
-            logger.info(
-                "Deepgram transcription succeeded: %d words, %d utterances",
-                result.word_count,
-                len(result.utterances),
-            )
-            return result
-        except Exception as exc:
-            logger.warning(
-                "Deepgram transcription failed, falling back to OpenAI: %s",
-                exc,
-            )
-            result = await self._transcribe_openai(audio_url)
-            logger.info(
-                "OpenAI transcription succeeded: %d words, %d utterances",
-                result.word_count,
-                len(result.utterances),
-            )
-            return result
-
-    async def _transcribe_deepgram(self, audio_url: str) -> TranscriptionResult:
-        """Transcribe using Deepgram Nova-3 with speaker diarization.
-
-        The Deepgram SDK v5 uses synchronous HTTP internally, so the call
-        is wrapped in asyncio.to_thread to avoid blocking the event loop.
-
-        Args:
-            audio_url: Presigned URL pointing to the audio file.
-
-        Returns:
-            TranscriptionResult from Deepgram.
-        """
-        client = DeepgramClient(api_key=self._deepgram_key)
-
-        def _call_deepgram() -> object:
-            return client.listen.v1.media.transcribe_url(
-                url=audio_url,
-                model="nova-3",
-                smart_format=True,
-                diarize=True,
-                utterances=True,
-                language="en",
-            )
-
-        response = await asyncio.to_thread(_call_deepgram)
-
-        # Extract utterances from response
-        utterances: list[dict] = []
-        if response.results.utterances:
-            for utt in response.results.utterances:
-                utterances.append(
-                    {
-                        "speaker": utt.speaker,
-                        "text": utt.transcript,
-                        "start": utt.start,
-                        "end": utt.end,
-                        "confidence": utt.confidence,
-                    }
-                )
-
-        # Extract full text from first channel alternative
-        full_text = ""
-        if (
-            response.results.channels
-            and response.results.channels[0].alternatives
-        ):
-            full_text = (
-                response.results.channels[0].alternatives[0].transcript
-            )
-
-        return TranscriptionResult(
-            utterances=utterances,
-            full_text=full_text,
-            provider="deepgram",
-            language="en",
-            word_count=len(full_text.split()) if full_text else 0,
-        )
-
-    async def _transcribe_openai(self, audio_url: str) -> TranscriptionResult:
-        """Transcribe using OpenAI gpt-4o-transcribe as fallback.
-
-        Downloads the audio file first (OpenAI requires file upload, not URL).
-        If the file exceeds 25 MB, raises ValueError.
-
-        Args:
-            audio_url: Presigned URL pointing to the audio file.
-
-        Returns:
-            TranscriptionResult from OpenAI.
-
-        Raises:
-            ValueError: If audio file exceeds 25 MB OpenAI limit.
+            ValueError: If audio file exceeds 25 MB limit.
         """
         # Download audio from presigned URL
         async with httpx.AsyncClient(timeout=120.0) as http_client:
@@ -172,19 +77,18 @@ class TranscriptionService:
 
         client = OpenAI(api_key=self._openai_key)
 
-        def _call_openai() -> object:
+        def _call_whisper() -> object:
             return client.audio.transcriptions.create(
-                model="gpt-4o-transcribe",
+                model="whisper-1",
                 file=("audio.aac", audio_bytes, "audio/aac"),
                 response_format="verbose_json",
                 timestamp_granularities=["segment"],
             )
 
-        result = await asyncio.to_thread(_call_openai)
+        result = await asyncio.to_thread(_call_whisper)
 
-        # Parse segments into utterances format
-        # OpenAI gpt-4o-transcribe returns segments but no speaker diarization,
-        # so all utterances are assigned speaker=0.
+        # Parse segments into utterances format.
+        # Whisper has no diarization, so all segments get speaker=0.
         utterances: list[dict] = []
         segments = getattr(result, "segments", None) or []
         for seg in segments:
@@ -200,10 +104,16 @@ class TranscriptionService:
 
         full_text = getattr(result, "text", "") or ""
 
+        logger.info(
+            "Whisper transcription succeeded: %d words, %d segments",
+            len(full_text.split()) if full_text else 0,
+            len(utterances),
+        )
+
         return TranscriptionResult(
             utterances=utterances,
             full_text=full_text,
-            provider="openai",
+            provider="whisper",
             language=getattr(result, "language", "en") or "en",
             word_count=len(full_text.split()) if full_text else 0,
         )

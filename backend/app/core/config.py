@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     twilio_test_mode: bool = False
 
     # AI Providers
-    deepgram_api_key: str = ""
     openai_api_key: str = ""
+    xai_api_key: str = ""
 
     # App
     debug: bool = False

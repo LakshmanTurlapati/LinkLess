@@ -31,9 +31,10 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Authenticated users are redirected away from auth screens.
 @riverpod
 GoRouter appRouter(Ref ref) {
-  // Trigger initial auth check.
+  // Trigger initial auth check (deferred to avoid modifying authProvider
+  // state during appRouterProvider initialization).
   final notifier = ref.read(authProvider.notifier);
-  notifier.checkAuthStatus();
+  Future.microtask(() => notifier.checkAuthStatus());
 
   // Listenable adapter so GoRouter re-evaluates redirect on auth changes.
   final authListenable = AuthStateListenable(ref);

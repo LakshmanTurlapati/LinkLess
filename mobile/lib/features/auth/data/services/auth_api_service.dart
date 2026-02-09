@@ -32,7 +32,7 @@ class AuthApiService {
   /// POST /auth/send-otp
   Future<void> sendOtp(String phoneNumber) async {
     await _dio.post(
-      'auth/send-otp',
+      '/auth/send-otp',
       data: {'phone_number': phoneNumber},
     );
   }
@@ -42,7 +42,7 @@ class AuthApiService {
   /// POST /auth/verify-otp
   Future<VerifyOtpResponse> verifyOtp(String phoneNumber, String code) async {
     final response = await _dio.post(
-      'auth/verify-otp',
+      '/auth/verify-otp',
       data: {
         'phone_number': phoneNumber,
         'code': code,
@@ -56,7 +56,7 @@ class AuthApiService {
   /// POST /auth/refresh
   Future<AuthToken> refreshToken(String refreshToken) async {
     final response = await _dio.post(
-      'auth/refresh',
+      '/auth/refresh',
       data: {'refresh_token': refreshToken},
     );
     return AuthToken.fromJson(response.data as Map<String, dynamic>);
@@ -67,6 +67,6 @@ class AuthApiService {
   /// POST /auth/logout
   /// Requires Authorization: Bearer header (added by interceptor).
   Future<void> logout() async {
-    await _dio.post('auth/logout');
+    await _dio.post('/auth/logout');
   }
 }

@@ -77,7 +77,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _configureAccessToken() async {
     final token = AppConfig.mapboxAccessToken;
     if (token.isNotEmpty) {
-      await MapboxOptions.setAccessToken(token);
+      MapboxOptions.setAccessToken(token);
     }
     if (mounted) {
       setState(() {
@@ -106,13 +106,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
 
     // Register map tap listener for GeoJSON cluster/unclustered point taps
-    mapboxMap.setOnMapTapListener(_MapTapListener(
+    final tapListener = _MapTapListener(
       mapboxMap: mapboxMap,
       clusterSourceId: _clusterSourceId,
       clusterCirclesLayerId: _clusterCirclesLayerId,
       unclusteredPointLayerId: _unclusteredPointLayerId,
       onConversationIdTapped: _handleUnclusteredPointTap,
-    ));
+    );
+    mapboxMap.setOnMapTapListener(tapListener.onMapTap);
 
     // Trigger initial data load for today's date
     if (mounted) {
@@ -331,7 +332,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         id: _clusterCountLayerId,
         sourceId: _clusterSourceId,
         filter: ['has', 'point_count'],
-        textField: ['get', 'point_count_abbreviated'],
+        textFieldExpression: ['get', 'point_count_abbreviated'],
         textSize: 12.0,
         textColor: Colors.white.value,
       ),
@@ -397,6 +398,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       MbxEdgeInsets(top: 80, left: 40, bottom: 40, right: 40),
       null, // bearing
       null, // pitch
+      null, // maxZoom
+      null, // offset
     ).then((cameraOptions) {
       _mapboxMap!.flyTo(
         cameraOptions,
@@ -611,7 +614,7 @@ class _AnnotationClickListener
 ///
 /// When a cluster circle is tapped, the map zooms in to expand it.
 /// When an unclustered point is tapped, the conversation detail sheet opens.
-class _MapTapListener extends OnMapTapListener {
+class _MapTapListener {
   final MapboxMap mapboxMap;
   final String clusterSourceId;
   final String clusterCirclesLayerId;
@@ -626,7 +629,6 @@ class _MapTapListener extends OnMapTapListener {
     required this.onConversationIdTapped,
   });
 
-  @override
   void onMapTap(MapContentGestureContext context) {
     final screenPoint = context.touchPosition;
 
@@ -640,7 +642,10 @@ class _MapTapListener extends OnMapTapListener {
     )
         .then((clusterFeatures) {
       if (clusterFeatures.isNotEmpty) {
-        _handleClusterTap(clusterFeatures.first, screenPoint);
+        final feature = clusterFeatures.first;
+        if (feature != null) {
+          _handleClusterTap(feature, screenPoint);
+        }
         return;
       }
 
@@ -654,7 +659,10 @@ class _MapTapListener extends OnMapTapListener {
       )
           .then((pointFeatures) {
         if (pointFeatures.isNotEmpty) {
-          _handleUnclusteredPointTap(pointFeatures.first);
+          final feature = pointFeatures.first;
+          if (feature != null) {
+            _handleUnclusteredPointTap(feature);
+          }
         }
       });
     });
@@ -665,13 +673,14 @@ class _MapTapListener extends OnMapTapListener {
     QueriedRenderedFeature feature,
     ScreenCoordinate screenPoint,
   ) {
-    final properties = feature.queriedFeature.feature['properties'];
-    if (properties == null) return;
+    final featureData = feature.queriedFeature.feature;
+    final properties = featureData['properties'];
+    if (properties == null || properties is! Map) return;
 
-    final geometry = feature.queriedFeature.feature['geometry'];
-    if (geometry == null) return;
+    final geometry = featureData['geometry'];
+    if (geometry == null || geometry is! Map) return;
 
-    final coordinates = geometry['coordinates'];
+    final coordinates = (geometry as Map)['coordinates'];
     if (coordinates == null || coordinates is! List || coordinates.length < 2) {
       return;
     }
@@ -691,10 +700,11 @@ class _MapTapListener extends OnMapTapListener {
 
   /// Opens the conversation detail sheet for an unclustered point tap.
   void _handleUnclusteredPointTap(QueriedRenderedFeature feature) {
-    final properties = feature.queriedFeature.feature['properties'];
-    if (properties == null) return;
+    final featureData = feature.queriedFeature.feature;
+    final properties = featureData['properties'];
+    if (properties == null || properties is! Map) return;
 
-    final conversationId = properties['conversationId'];
+    final conversationId = (properties as Map)['conversationId'];
     if (conversationId != null && conversationId is String) {
       onConversationIdTapped(conversationId);
     }

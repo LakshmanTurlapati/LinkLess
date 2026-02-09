@@ -68,14 +68,13 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
             utterances = json.loads(transcript.content)
             lines: list[str] = []
             for utt in utterances:
-                speaker = utt.get("speaker", 0)
                 text = utt.get("text", "")
-                lines.append(f"Speaker {speaker}: {text}")
+                lines.append(text)
             transcript_text = "\n".join(lines)
 
-            # Generate summary
+            # Generate summary via Grok
             summarization_service = SummarizationService(
-                openai_api_key=settings.openai_api_key
+                xai_api_key=settings.xai_api_key
             )
             summary_result = await summarization_service.summarize(
                 transcript_text

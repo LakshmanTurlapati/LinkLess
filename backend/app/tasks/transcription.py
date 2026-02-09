@@ -1,6 +1,6 @@
 """ARQ task for transcribing conversation audio.
 
-Processes audio files through TranscriptionService (Deepgram primary, OpenAI fallback),
+Processes audio files through TranscriptionService (OpenAI Whisper),
 stores results in the transcripts table, and chains to summarization.
 """
 
@@ -83,9 +83,8 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
                 expires_in=3600,
             )
 
-            # Transcribe with Deepgram primary, OpenAI fallback
+            # Transcribe with OpenAI Whisper
             transcription_service = TranscriptionService(
-                deepgram_api_key=settings.deepgram_api_key,
                 openai_api_key=settings.openai_api_key,
             )
             transcription_result = await transcription_service.transcribe(

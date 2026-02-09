@@ -39,7 +39,7 @@ class ConversationApiService {
     }
 
     final response = await _dio.post(
-      'api/v1/conversations',
+      '/conversations',
       data: data,
     );
     return response.data as Map<String, dynamic>;
@@ -51,7 +51,7 @@ class ConversationApiService {
   /// Triggers the backend transcription pipeline.
   Future<Map<String, dynamic>> confirmUpload(String conversationId) async {
     final response = await _dio.post(
-      'api/v1/conversations/$conversationId/confirm-upload',
+      '/conversations/$conversationId/confirm-upload',
     );
     return response.data as Map<String, dynamic>;
   }
@@ -63,7 +63,7 @@ class ConversationApiService {
     String conversationId,
   ) async {
     final response = await _dio.get(
-      'api/v1/conversations/$conversationId',
+      '/conversations/$conversationId',
     );
     return response.data as Map<String, dynamic>;
   }
@@ -72,7 +72,7 @@ class ConversationApiService {
   ///
   /// GET /api/v1/conversations
   Future<List<Map<String, dynamic>>> listConversations() async {
-    final response = await _dio.get('api/v1/conversations');
+    final response = await _dio.get('/conversations');
     final list = response.data as List<dynamic>;
     return list
         .map((e) => e as Map<String, dynamic>)
