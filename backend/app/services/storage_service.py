@@ -31,7 +31,10 @@ class StorageService:
             endpoint_url=settings.tigris_endpoint,
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
-            config=Config(s3={"addressing_style": "virtual"}),
+            config=Config(
+                s3={"addressing_style": "virtual"},
+                signature_version="s3v4",
+            ),
         )
         self._bucket = settings.tigris_bucket
 
@@ -124,4 +127,4 @@ class StorageService:
         Returns:
             The full public URL for the object.
         """
-        return f"https://{self._bucket}.t3.storage.dev/{key}"
+        return f"https://{self._bucket}.fly.storage.tigris.dev/{key}"

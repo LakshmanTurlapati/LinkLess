@@ -1,0 +1,23 @@
+app = "linkless-api"
+primary_region = "dfw"
+
+[build]
+
+[env]
+  API_PREFIX = "/api/v1"
+  TIGRIS_ENDPOINT = "https://fly.storage.tigris.dev"
+  TIGRIS_BUCKET = "linkless-audio"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[deploy]
+  release_command = "alembic upgrade head"
