@@ -75,6 +75,7 @@ async def verify_otp(
     user = await auth_service.get_or_create_user(body.phone_number)
     session = await auth_service.create_session(str(user.id))
     session.user = UserResponse.from_model(user)
+    session.is_new_user = user.display_name is None
     return session
 
 

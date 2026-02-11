@@ -83,3 +83,4 @@ class AuthTokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     user: UserResponse | None = None
+    is_new_user: bool = False

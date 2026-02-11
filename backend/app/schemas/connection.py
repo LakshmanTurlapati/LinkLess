@@ -48,6 +48,21 @@ class AcceptResponse(BaseModel):
     exchanged_links: list[SocialLinkExchange] = []
 
 
+class PendingConnectionResponse(BaseModel):
+    """Response schema for a pending connection request with requester info."""
+
+    id: uuid.UUID
+    requester_id: uuid.UUID
+    recipient_id: uuid.UUID
+    conversation_id: uuid.UUID
+    status: str
+    created_at: datetime
+    requester_display_name: Optional[str] = None
+    requester_initials: Optional[str] = None
+    requester_photo_url: Optional[str] = None
+    requester_is_anonymous: bool = False
+
+
 class ConnectionResponse(BaseModel):
     """Response schema for an established (mutually accepted) connection."""
 

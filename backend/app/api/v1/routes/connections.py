@@ -16,6 +16,7 @@ from app.schemas.connection import (
     ConnectionRequestCreate,
     ConnectionRequestResponse,
     ConnectionResponse,
+    PendingConnectionResponse,
     SocialLinkExchange,
 )
 from app.services.connection_service import ConnectionService
@@ -148,18 +149,19 @@ async def list_connections(
 
 @router.get(
     "/pending",
-    response_model=list[ConnectionRequestResponse],
+    response_model=list[PendingConnectionResponse],
 )
 async def list_pending(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[ConnectionRequestResponse]:
-    """List pending connection requests where the user is the recipient."""
+) -> list[PendingConnectionResponse]:
+    """List pending connection requests where the user is the recipient.
+
+    Returns enriched data including requester display info.
+    """
     service = ConnectionService(db)
     requests = await service.list_pending(user.id)
-    return [
-        ConnectionRequestResponse.model_validate(req) for req in requests
-    ]
+    return [PendingConnectionResponse(**req) for req in requests]
 
 
 @router.get(

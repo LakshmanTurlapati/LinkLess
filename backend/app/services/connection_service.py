@@ -285,21 +285,70 @@ class ConnectionService:
 
     async def list_pending(
         self, user_id: uuid_mod.UUID
-    ) -> list[ConnectionRequest]:
+    ) -> list[dict]:
         """List pending connection requests where user is the recipient.
+
+        Enriches each request with requester display info (name, initials,
+        photo URL, anonymous flag) using the same pattern as list_connections.
 
         Args:
             user_id: The authenticated user.
 
         Returns:
-            List of pending ConnectionRequest objects.
+            List of dicts with request fields plus requester display info.
         """
         stmt = select(ConnectionRequest).where(
             ConnectionRequest.recipient_id == user_id,
             ConnectionRequest.status == "pending",
         )
         result = await self.db.execute(stmt)
-        return list(result.scalars().all())
+        requests = list(result.scalars().all())
+
+        pending = []
+        storage = StorageService()
+
+        for req in requests:
+            # Get requester user info
+            user_stmt = select(User).where(User.id == req.requester_id)
+            user_result = await self.db.execute(user_stmt)
+            requester = user_result.scalar_one_or_none()
+
+            requester_display_name: Optional[str] = None
+            requester_initials: Optional[str] = None
+            requester_photo_url: Optional[str] = None
+            requester_is_anonymous = False
+
+            if requester is not None:
+                requester_is_anonymous = requester.is_anonymous
+                if requester.display_name:
+                    parts = requester.display_name.strip().split()
+                    requester_initials = "".join(
+                        p[0].upper() for p in parts[:2]
+                    )
+                    if not requester.is_anonymous:
+                        requester_display_name = requester.display_name
+
+                if requester.photo_url:
+                    requester_photo_url = storage.get_public_url(
+                        requester.photo_url
+                    )
+
+            pending.append(
+                {
+                    "id": req.id,
+                    "requester_id": req.requester_id,
+                    "recipient_id": req.recipient_id,
+                    "conversation_id": req.conversation_id,
+                    "status": req.status,
+                    "created_at": req.created_at,
+                    "requester_display_name": requester_display_name,
+                    "requester_initials": requester_initials,
+                    "requester_photo_url": requester_photo_url,
+                    "requester_is_anonymous": requester_is_anonymous,
+                }
+            )
+
+        return pending
 
     async def get_connection_status(
         self,
