@@ -31,15 +31,10 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
@@ -59,5 +54,9 @@
 	<string>Linkless uses Bluetooth to detect nearby users for automatic conversation capture.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Linkless uses Bluetooth to let nearby users detect you.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Linkless needs camera access to take your profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Linkless needs photo library access to choose your profile photo.</string>
 </dict>
 </plist>
