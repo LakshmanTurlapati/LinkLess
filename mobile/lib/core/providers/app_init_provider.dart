@@ -1,9 +1,11 @@
-import 'package:flutter/widgets.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:linkless/ble/ble_manager.dart';
+import 'package:linkless/core/services/notification_service.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 import 'package:linkless/features/connections/presentation/providers/block_provider.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
@@ -22,10 +24,10 @@ bool _initializing = false;
 /// ([AuthStatus.unauthenticated]), stops BLE scanning.
 ///
 /// Initialization sequence:
-/// 1. Fetch user profile for user ID
-/// 2. Sync blocked users list from backend
-/// 3. Check invisible mode preference
-/// 4. Request core permissions (microphone + location)
+/// 1. Request core permissions (microphone + location + notification)
+/// 2. Fetch user profile for user ID
+/// 3. Sync blocked users list from backend
+/// 4. Check invisible mode preference
 /// 5. Conditionally initialize and start BLE
 ///
 /// This provider is side-effect-only (returns void), matching the
@@ -61,23 +63,57 @@ Future<void> _initializeServices(Ref ref) async {
   _initializing = true;
 
   try {
-    // Step 1: Get user ID via profile fetch.
+    // Step 1: Request core app permissions (microphone + location).
+    // Requested upfront so the user is prompted immediately after login,
+    // rather than waiting until proximity triggers recording.
+    // Placed before any early-return guards so every authenticated user
+    // (new, invisible, network-error) still sees the permission dialogs.
+    final corePermissions = await [
+      Permission.microphone,
+      Permission.locationWhenInUse,
+    ].request();
+
+    for (final entry in corePermissions.entries) {
+      debugPrint('[AppInit] ${entry.key}: ${entry.value}');
+    }
+
+    // Step 1b: Initialize notification service + request notification permission.
+    await NotificationService.instance.initialize();
+    await Permission.notification.request();
+
+    // If already marked as new user, skip initialization -- router will
+    // redirect to profile creation. Avoids redundant API calls.
+    if (ref.read(authProvider).isNewUser) {
+      debugPrint('[AppInit] New user detected, skipping init');
+      return;
+    }
+
+    // Step 2: Get user ID via profile fetch.
     // The profile endpoint is authenticated (auth interceptor attaches
     // Bearer token from TokenStorageService). If the profile fetch fails
-    // (e.g., new user who hasn't created a profile yet), return early --
-    // BLE init will be retried when the provider re-evaluates after
-    // profile creation.
+    // with 404 (new user who hasn't created a profile yet), mark as new
+    // user so the router redirects to profile creation. For other errors,
+    // return early without marking -- avoids blocking returning users on
+    // network issues.
     final String userId;
     try {
       final profile = await ref.read(profileApiServiceProvider).getProfile();
       userId = profile.id;
       debugPrint('[AppInit] Profile fetched, userId: $userId');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        debugPrint('[AppInit] Profile not found (new user), redirecting');
+        ref.read(authProvider.notifier).markAsNewUser();
+      } else {
+        debugPrint('[AppInit] Profile fetch failed (network?): $e');
+      }
+      return;
     } catch (e) {
-      debugPrint('[AppInit] Profile fetch failed (new user?): $e');
+      debugPrint('[AppInit] Profile fetch failed: $e');
       return;
     }
 
-    // Step 2: Sync blocked users list (GAP 3 fix).
+    // Step 3: Sync blocked users list (GAP 3 fix).
     // Must complete before BLE starts so blocked users are filtered
     // from the very first scan cycle.
     try {
@@ -88,25 +124,13 @@ Future<void> _initializeServices(Ref ref) async {
       debugPrint('[AppInit] Block list sync error (using fallback): $e');
     }
 
-    // Step 3: Check invisible mode preference.
+    // Step 4: Check invisible mode preference.
     final prefs = await SharedPreferences.getInstance();
     final isInvisible = prefs.getBool('invisible_mode') ?? false;
 
     if (isInvisible) {
       debugPrint('[AppInit] Invisible mode enabled -- skipping BLE start');
       return;
-    }
-
-    // Step 4: Request core app permissions (microphone + location).
-    // Requested upfront so the user is prompted immediately after login,
-    // rather than waiting until proximity triggers recording.
-    final corePermissions = await [
-      Permission.microphone,
-      Permission.locationWhenInUse,
-    ].request();
-
-    for (final entry in corePermissions.entries) {
-      debugPrint('[AppInit] ${entry.key}: ${entry.value}');
     }
 
     // Step 5: Initialize and start BLE (GAP 1 fix).

@@ -47,12 +47,14 @@ class AuthState {
   final User? user;
   final String? errorMessage;
   final String? phoneNumber;
+  final bool isNewUser;
 
   const AuthState({
     this.status = AuthStatus.initial,
     this.user,
     this.errorMessage,
     this.phoneNumber,
+    this.isNewUser = false,
   });
 
   AuthState copyWith({
@@ -60,12 +62,14 @@ class AuthState {
     User? user,
     String? errorMessage,
     String? phoneNumber,
+    bool? isNewUser,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       errorMessage: errorMessage,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      isNewUser: isNewUser ?? this.isNewUser,
     );
   }
 }
@@ -126,8 +130,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     state = state.copyWith(status: AuthStatus.loading);
     try {
-      final user = await _repository.verifyOtp(phone, code);
-      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      final result = await _repository.verifyOtp(phone, code);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: result.user,
+        isNewUser: result.isNewUser,
+      );
     } on DioException catch (e) {
       final message = _extractErrorMessage(e) ?? 'Invalid verification code';
       state = state.copyWith(status: AuthStatus.error, errorMessage: message);
@@ -144,6 +152,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading);
     await _repository.logout();
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  /// Marks the user as no longer new (profile has been created).
+  void setProfileCreated() {
+    state = state.copyWith(isNewUser: false);
+  }
+
+  /// Marks the user as new (e.g. when app restart detects no profile).
+  void markAsNewUser() {
+    state = state.copyWith(isNewUser: true);
   }
 
   /// Clears the current error, returning to the previous non-error status.

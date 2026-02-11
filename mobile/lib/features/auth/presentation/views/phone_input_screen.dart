@@ -60,6 +60,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     final isLoading = authState.status == AuthStatus.loading;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -70,24 +71,12 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
               children: [
                 const Spacer(flex: 3),
 
-                // App logo
+                // App wordmark logo
                 Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: ClipOval(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Image.asset(
-                          '../assets/app icon.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                  child: Image.asset(
+                    'assets/Wordmark - No BG.png',
+                    height: 320,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -97,7 +86,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                   'Login',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.backgroundDark,
                       ),
                   textAlign: TextAlign.center,
                 ),
@@ -106,8 +95,14 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                 // Phone input with pill shape
                 PhoneFormField(
                   controller: _phoneController,
+                  style: const TextStyle(color: AppColors.backgroundDark),
+                  countryButtonStyle: const CountryButtonStyle(
+                    textStyle: TextStyle(color: AppColors.backgroundDark),
+                    dropdownIconColor: AppColors.backgroundDark,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Phone Number',
+                    labelStyle: const TextStyle(color: AppColors.backgroundDark),
                     filled: true,
                     fillColor: AppColors.inputBackground,
                     border: OutlineInputBorder(
@@ -121,7 +116,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(
-                        color: AppColors.accentPurple,
+                        color: AppColors.accentBlue,
                         width: 2,
                       ),
                     ),
@@ -138,6 +133,10 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
 
                 FilledButton(
                   onPressed: isLoading ? null : _onContinue,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.backgroundDark,
+                    foregroundColor: Colors.white,
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: isLoading

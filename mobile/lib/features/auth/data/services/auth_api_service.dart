@@ -7,13 +7,19 @@ import 'package:linkless/features/auth/domain/models/user.dart';
 class VerifyOtpResponse {
   final AuthToken token;
   final User user;
+  final bool isNewUser;
 
-  const VerifyOtpResponse({required this.token, required this.user});
+  const VerifyOtpResponse({
+    required this.token,
+    required this.user,
+    this.isNewUser = false,
+  });
 
   factory VerifyOtpResponse.fromJson(Map<String, dynamic> json) {
     return VerifyOtpResponse(
       token: AuthToken.fromJson(json),
       user: User.fromJson(json['user'] as Map<String, dynamic>),
+      isNewUser: json['is_new_user'] as bool? ?? false,
     );
   }
 }

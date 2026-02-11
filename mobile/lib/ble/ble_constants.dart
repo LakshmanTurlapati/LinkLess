@@ -18,9 +18,13 @@ class BleConstants {
   static final Guid userIdCharacteristicUuid =
       Guid('f2688f1c-0fbd-47aa-a048-df36c8325b67');
 
-  /// String form of service UUID for flutter_ble_peripheral advertising.
+  /// String form of service UUID for ble_peripheral advertising.
   static const String serviceUuidString =
       '603c6e94-03b8-429c-b4a9-38d55567523c';
+
+  /// String form of characteristic UUID for ble_peripheral GATT server.
+  static const String userIdCharacteristicUuidString =
+      'f2688f1c-0fbd-47aa-a048-df36c8325b67';
 
   /// RSSI threshold to consider a device as "entering" proximity range.
   /// Higher (less negative) = closer. -70 dBm is roughly 1-3 meters.

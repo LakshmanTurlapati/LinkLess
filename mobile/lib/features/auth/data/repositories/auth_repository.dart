@@ -23,14 +23,18 @@ class AuthRepository {
 
   /// Verifies the OTP [code] for [phoneNumber].
   ///
-  /// On success, saves tokens to secure storage and returns the [User].
-  Future<User> verifyOtp(String phoneNumber, String code) async {
+  /// On success, saves tokens to secure storage and returns the [User]
+  /// along with whether this is a new user who needs to create a profile.
+  Future<({User user, bool isNewUser})> verifyOtp(
+    String phoneNumber,
+    String code,
+  ) async {
     final response = await _apiService.verifyOtp(phoneNumber, code);
     await _tokenStorage.saveTokens(
       accessToken: response.token.accessToken,
       refreshToken: response.token.refreshToken,
     );
-    return response.user;
+    return (user: response.user, isNewUser: response.isNewUser);
   }
 
   /// Checks if the user has stored tokens (i.e., was previously logged in).

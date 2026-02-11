@@ -107,14 +107,18 @@ class _OtpVerificationScreenState
         border: Border.all(
           color: _errorText != null
               ? AppColors.error
-              : AppColors.border,
+              : const Color(0xFFD0D0D0),
         ),
       ),
     );
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Verify Phone'),
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.backgroundDark,
+        elevation: 0,
       ),
       body: SafeArea(
         child: Padding(
@@ -127,6 +131,7 @@ class _OtpVerificationScreenState
                 'Enter verification code',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AppColors.backgroundDark,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -134,7 +139,7 @@ class _OtpVerificationScreenState
               Text(
                 'We sent a 4-digit code to\n$_maskedPhone',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Colors.grey[600],
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -150,7 +155,7 @@ class _OtpVerificationScreenState
                       color: AppColors.inputBackground,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.accentPurple,
+                        color: AppColors.accentBlue,
                         width: 2,
                       ),
                     ),
@@ -179,6 +184,10 @@ class _OtpVerificationScreenState
                   onPressed: _pinController.text.length == 4
                       ? () => _onVerify(_pinController.text)
                       : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.backgroundDark,
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text('Verify'),
@@ -188,6 +197,9 @@ class _OtpVerificationScreenState
               Center(
                 child: TextButton(
                   onPressed: _canResend && !isLoading ? _onResend : null,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.backgroundDark,
+                  ),
                   child: Text(
                     _canResend
                         ? 'Resend Code'

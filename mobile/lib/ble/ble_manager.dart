@@ -306,6 +306,9 @@ class BleManager {
     _peripheralExchangeSubscription =
         _peripheralService.peerUserIdStream.listen(_onPeripheralExchange);
 
+    // Initialize Peripheral GATT server before advertising
+    await _peripheralService.initialize();
+
     // Start both roles concurrently
     await Future.wait([
       _startScanCycle(),
