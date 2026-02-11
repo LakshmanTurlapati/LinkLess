@@ -58,17 +58,17 @@ LinkLess runs quietly in your pocket. When two users are nearby, their phones di
 
 ## Features
 
-| | Feature | Description |
-|---|---|---|
-| 📡 | **BLE Proximity Detection** | Automatically discovers nearby LinkLess users via Bluetooth Low Energy scanning and advertising — no manual pairing needed |
-| 🎙️ | **Passive Audio Recording** | Records conversations in the background using a foreground service with configurable audio sessions |
-| 🤖 | **AI Transcription & Summarization** | Transcribes audio with OpenAI Whisper, then summarizes key topics with xAI Grok — all asynchronously via an ARQ task queue |
-| 🗺️ | **Interactive Map** | Every conversation is GPS-tagged and displayed on a Mapbox map with date-based navigation |
-| 🤝 | **Social Connections** | Send connection requests after a conversation; once mutually accepted, exchange Instagram, LinkedIn, X, and Snapchat handles |
-| 📴 | **Offline-First** | Local Drift/SQLite database stores conversations, transcripts, and blocked users — syncs to the cloud when connectivity returns |
-| 🔍 | **Full-Text Search** | PostgreSQL `tsvector` powered search across transcripts, summaries, and peer names with ranked results and snippet highlights |
-| 🔒 | **Privacy Controls** | Anonymous mode hides your identity from peers; invisible mode stops BLE advertising entirely; block users at any time |
-| 📱 | **Phone Auth with OTP** | Passwordless authentication via Twilio Verify SMS — no emails, no passwords, just your phone number |
+| Feature | Description |
+|---|---|
+| **BLE Proximity Detection** | Automatically discovers nearby LinkLess users via Bluetooth Low Energy scanning and advertising — no manual pairing needed |
+| **Passive Audio Recording** | Records conversations in the background using a foreground service with configurable audio sessions |
+| **AI Transcription & Summarization** | Transcribes audio with OpenAI Whisper, then summarizes key topics with xAI Grok — all asynchronously via an ARQ task queue |
+| **Interactive Map** | Every conversation is GPS-tagged and displayed on a Mapbox map with date-based navigation |
+| **Social Connections** | Send connection requests after a conversation; once mutually accepted, exchange Instagram, LinkedIn, X, and Snapchat handles |
+| **Offline-First** | Local Drift/SQLite database stores conversations, transcripts, and blocked users — syncs to the cloud when connectivity returns |
+| **Full-Text Search** | PostgreSQL `tsvector` powered search across transcripts, summaries, and peer names with ranked results and snippet highlights |
+| **Privacy Controls** | Anonymous mode hides your identity from peers; invisible mode stops BLE advertising entirely; block users at any time |
+| **Phone Auth with OTP** | Passwordless authentication via Twilio Verify SMS — no emails, no passwords, just your phone number |
 
 ---
 
@@ -78,7 +78,7 @@ LinkLess runs quietly in your pocket. When two users are nearby, their phones di
 
 ```mermaid
 graph TB
-    subgraph Mobile["📱 Mobile App (Flutter)"]
+    subgraph Mobile["Mobile App (Flutter)"]
         BLE[BLE Manager]
         REC[Recording Service]
         SYNC[Sync Engine]
@@ -86,7 +86,7 @@ graph TB
         DB_LOCAL[(Drift/SQLite)]
     end
 
-    subgraph Backend["⚙️ Backend (FastAPI)"]
+    subgraph Backend["Backend (FastAPI)"]
         API[REST API]
         AUTH[Auth Service]
         CONV[Conversation Service]
@@ -94,18 +94,18 @@ graph TB
         CONN[Connection Service]
     end
 
-    subgraph Workers["🔄 ARQ Workers"]
+    subgraph Workers["ARQ Workers"]
         TRX[Transcription Task]
         SUM[Summarization Task]
     end
 
-    subgraph DataStores["💾 Data Stores"]
+    subgraph DataStores["Data Stores"]
         PG[(PostgreSQL + PostGIS)]
         RD[(Redis)]
         S3[(Tigris S3)]
     end
 
-    subgraph ExternalAPIs["🌐 External APIs"]
+    subgraph ExternalAPIs["External APIs"]
         WHISPER[OpenAI Whisper]
         GROK[xAI Grok]
         TWILIO[Twilio Verify]
@@ -493,6 +493,7 @@ Please follow the existing architectural patterns:
 ---
 
 <p align="center">
-  Built by <a href="https://github.com/LakshmanTurlapati">Lakshman Turlapati</a><br/>
-  If LinkLess helped you never forget a connection, consider giving it a ⭐
+  Idea by <a href="https://www.linkedin.com/in/syshasharma/">Sysha Sharma</a><br/>
+  Brought to life by <a href="https://github.com/LakshmanTurlapati">Lakshman Turlapati</a><br/><br/>
+  If LinkLess helped you never forget a connection, consider giving it a star
 </p>
