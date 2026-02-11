@@ -23,7 +23,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.backgroundDarker,
-        indicatorColor: AppColors.accentPurple.withOpacity(0.15),
+        indicatorColor: AppColors.accentBlue.withOpacity(0.15),
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (int index) {
           navigationShell.goBranch(
@@ -33,18 +33,18 @@ class ScaffoldWithNavBar extends StatelessWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline, color: AppColors.textTertiary),
-            selectedIcon: Icon(Icons.chat_bubble, color: AppColors.accentPurple),
-            label: 'Conversations',
+            icon: Icon(Icons.link_outlined, color: AppColors.textTertiary),
+            selectedIcon: Icon(Icons.link, color: AppColors.accentBlue),
+            label: 'Links',
           ),
           NavigationDestination(
             icon: Icon(Icons.map_outlined, color: AppColors.textTertiary),
-            selectedIcon: Icon(Icons.map, color: AppColors.accentPurple),
+            selectedIcon: Icon(Icons.map, color: AppColors.accentBlue),
             label: 'Map',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline, color: AppColors.textTertiary),
-            selectedIcon: Icon(Icons.person, color: AppColors.accentPurple),
+            selectedIcon: Icon(Icons.person, color: AppColors.accentBlue),
             label: 'Profile',
           ),
         ],

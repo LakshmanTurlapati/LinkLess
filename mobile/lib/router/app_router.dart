@@ -26,7 +26,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Provides the app-level GoRouter configuration.
 ///
 /// Uses [StatefulShellRoute.indexedStack] for bottom tab navigation
-/// with three branches: Conversations, Map, Profile.
+/// with three branches: Links, Map, Profile.
 ///
 /// Auth guard redirects unauthenticated users to the phone input screen.
 /// Authenticated users are redirected away from auth screens.
@@ -45,13 +45,14 @@ GoRouter appRouter(Ref ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/conversations',
+    initialLocation: '/links',
     refreshListenable: authListenable,
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isOnAuthRoute = state.matchedLocation.startsWith('/auth');
       final isOnDebugRoute = state.matchedLocation.startsWith('/ble-debug');
+      final isOnProfileCreate = state.matchedLocation == '/profile/create';
       final isInitialOrLoading = authState.status == AuthStatus.initial ||
           authState.status == AuthStatus.loading;
 
@@ -66,9 +67,19 @@ GoRouter appRouter(Ref ref) {
         return '/auth/phone-input';
       }
 
-      // If authenticated but on an auth route, redirect to conversations.
+      // If authenticated + new user on auth route, redirect to profile creation.
+      if (isAuthenticated && isOnAuthRoute && authState.isNewUser) {
+        return '/profile/create';
+      }
+
+      // If authenticated but on an auth route, redirect to links.
       if (isAuthenticated && isOnAuthRoute) {
-        return '/conversations';
+        return '/links';
+      }
+
+      // If authenticated + new user + not already on profile create, force profile creation.
+      if (isAuthenticated && authState.isNewUser && !isOnProfileCreate) {
+        return '/profile/create';
       }
 
       return null;
@@ -99,10 +110,19 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ProfileEditScreen(),
       ),
 
-      // Connections list (outside the shell, no bottom nav).
+      // Conversations (standalone route outside the shell, no bottom nav).
       GoRoute(
-        path: '/connections',
-        builder: (context, state) => const ConnectionsListScreen(),
+        path: '/conversations',
+        builder: (context, state) => const ConversationsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return PlaybackScreen(conversationId: id);
+            },
+          ),
+        ],
       ),
 
       // Search screen (outside the shell, full-screen focus).
@@ -116,6 +136,7 @@ GoRouter appRouter(Ref ref) {
         path: '/profile/encounter/:userId',
         builder: (context, state) => EncounterCardScreen(
           userId: state.pathParameters['userId'] ?? '',
+          conversationId: state.uri.queryParameters['conversationId'],
         ),
       ),
 
@@ -134,17 +155,8 @@ GoRouter appRouter(Ref ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/conversations',
-                builder: (context, state) => const ConversationsScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id'] ?? '';
-                      return PlaybackScreen(conversationId: id);
-                    },
-                  ),
-                ],
+                path: '/links',
+                builder: (context, state) => const ConnectionsListScreen(),
               ),
             ],
           ),

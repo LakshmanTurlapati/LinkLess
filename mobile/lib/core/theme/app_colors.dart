@@ -8,7 +8,7 @@ class AppColors {
   static const Color backgroundDarker = Color(0xFF141831);
   static const Color backgroundCard = Color(0xFF232952);
 
-  static const Color accentPurple = Color(0xFF6C63FF);
+  static const Color accentBlue = Color(0xFF4A6CF7);
 
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB0B3C5);
@@ -17,8 +17,8 @@ class AppColors {
   static const Color inputBackground = Color(0xFFF5F5F7);
   static const Color inputHint = Color(0xFF9CA0B5);
 
-  static const Color encounterHeader = Color(0xFF2E2B5F);
-  static const Color chipBackground = Color(0xFF2E2B5F);
+  static const Color encounterHeader = Color(0xFF2B3560);
+  static const Color chipBackground = Color(0xFF2B3560);
 
   static const Color divider = Color(0xFF2E3358);
   static const Color border = Color(0xFF3A3F6B);

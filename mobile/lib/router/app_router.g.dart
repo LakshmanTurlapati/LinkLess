@@ -6,12 +6,12 @@ part of 'app_router.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appRouterHash() => r'82c7ba506bd6a2fa5e256b9511f10168b341031e';
+String _$appRouterHash() => r'1a38d2a8dbfafe88fbbc3b75d0e9ec673768eecc';
 
 /// Provides the app-level GoRouter configuration.
 ///
 /// Uses [StatefulShellRoute.indexedStack] for bottom tab navigation
-/// with three branches: Conversations, Map, Profile.
+/// with three branches: Links, Map, Profile.
 ///
 /// Auth guard redirects unauthenticated users to the phone input screen.
 /// Authenticated users are redirected away from auth screens.

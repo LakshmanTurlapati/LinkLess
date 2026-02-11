@@ -11,9 +11,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
-        primary: AppColors.accentPurple,
+        primary: AppColors.accentBlue,
         onPrimary: AppColors.textPrimary,
-        secondary: AppColors.accentPurple,
+        secondary: AppColors.accentBlue,
         onSecondary: AppColors.textPrimary,
         surface: AppColors.backgroundDark,
         onSurface: AppColors.textPrimary,
@@ -34,17 +34,17 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.backgroundDarker,
-        indicatorColor: AppColors.accentPurple.withOpacity(0.15),
+        indicatorColor: AppColors.accentBlue.withOpacity(0.15),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.accentPurple);
+            return const IconThemeData(color: AppColors.accentBlue);
           }
           return const IconThemeData(color: AppColors.textTertiary);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const TextStyle(
-              color: AppColors.accentPurple,
+              color: AppColors.accentBlue,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             );
@@ -57,8 +57,10 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.accentPurple,
+          backgroundColor: AppColors.accentBlue,
           foregroundColor: AppColors.textPrimary,
+          disabledBackgroundColor: AppColors.accentBlue.withOpacity(0.5),
+          disabledForegroundColor: AppColors.textPrimary.withOpacity(0.7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
@@ -75,7 +77,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.accentPurple,
+          foregroundColor: AppColors.accentBlue,
         ),
       ),
       cardTheme: CardThemeData(
@@ -111,13 +113,13 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.accentPurple;
+            return AppColors.accentBlue;
           }
           return AppColors.textTertiary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.accentPurple.withOpacity(0.4);
+            return AppColors.accentBlue.withOpacity(0.4);
           }
           return AppColors.backgroundCard;
         }),
@@ -127,6 +129,8 @@ class AppTheme {
         fillColor: AppColors.inputBackground,
         hintStyle: const TextStyle(color: AppColors.inputHint),
         labelStyle: const TextStyle(color: AppColors.inputHint),
+        prefixIconColor: AppColors.inputHint,
+        suffixIconColor: AppColors.inputHint,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide.none,
@@ -137,7 +141,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: AppColors.accentPurple, width: 2),
+          borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
@@ -179,7 +183,7 @@ class AppTheme {
         color: AppColors.textPrimary,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accentPurple,
+        color: AppColors.accentBlue,
       ),
     );
   }
