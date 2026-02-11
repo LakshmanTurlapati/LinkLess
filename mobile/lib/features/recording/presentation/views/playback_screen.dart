@@ -282,7 +282,7 @@ class PlaybackScreen extends ConsumerWidget {
       case 'uploading':
         message = 'Uploading audio...';
         icon = Icons.cloud_upload_outlined;
-        color = AppColors.accentPurple;
+        color = AppColors.accentBlue;
       case 'uploaded':
       case 'transcribing':
         message = 'Transcribing conversation...';
@@ -412,7 +412,7 @@ class PlaybackScreen extends ConsumerWidget {
             context,
             icon: Icons.send,
             label: 'Connection request sent',
-            color: AppColors.accentPurple,
+            color: AppColors.accentBlue,
           );
         }
 

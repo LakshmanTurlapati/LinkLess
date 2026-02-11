@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
+import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
 import 'package:linkless/features/profile/presentation/widgets/avatar_picker.dart';
 
@@ -91,6 +92,7 @@ class _ProfileCreationScreenState
                 // Display name field (required) -- pill-shaped
                 TextFormField(
                   controller: _nameController,
+                  style: const TextStyle(color: AppColors.backgroundDark),
                   decoration: InputDecoration(
                     labelText: 'Display Name',
                     hintText: 'Enter your name',
@@ -107,7 +109,7 @@ class _ProfileCreationScreenState
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(
-                        color: AppColors.accentPurple,
+                        color: AppColors.accentBlue,
                         width: 2,
                       ),
                     ),
@@ -162,8 +164,8 @@ class _ProfileCreationScreenState
         await ref.read(profileProvider.notifier).createProfile(name);
 
     if (success && mounted) {
-      // Navigate to main app after profile creation
-      context.go('/profile');
+      ref.read(authProvider.notifier).setProfileCreated();
+      context.go('/links');
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/map/domain/models/map_conversation.dart';
@@ -23,6 +24,13 @@ class ConversationDetailSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(conversationDetailProvider(conversation.id));
+    final peerUserId = detail.whenOrNull(
+      data: (data) => data?['peer_user_id'] as String?,
+    );
+    final canViewProfile =
+        !conversation.peerIsAnonymous && peerUserId != null;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.5,
       minChildSize: 0.25,
@@ -54,7 +62,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               ),
 
               // Peer info row
-              _buildPeerInfoRow(context),
+              _buildPeerInfoRow(context, canViewProfile, peerUserId),
 
               const SizedBox(height: 12),
 
@@ -64,7 +72,7 @@ class ConversationDetailSheet extends ConsumerWidget {
               const Divider(height: 24),
 
               // Transcript and summary from backend
-              _buildTranscriptSummary(context, ref),
+              _buildTranscriptSummary(context, ref, detail),
             ],
           ),
         );
@@ -73,18 +81,25 @@ class ConversationDetailSheet extends ConsumerWidget {
   }
 
   /// Builds the peer identity row with avatar and display name.
-  Widget _buildPeerInfoRow(BuildContext context) {
+  ///
+  /// When [canViewProfile] is true the row becomes tappable and navigates
+  /// to the encounter card for [peerUserId].
+  Widget _buildPeerInfoRow(
+    BuildContext context,
+    bool canViewProfile,
+    String? peerUserId,
+  ) {
     final displayName = _peerDisplayName;
     final initialsText = conversation.peerInitials ?? '?';
 
-    return Row(
+    final row = Row(
       children: [
         // Circular avatar with photo or initials
         CircleAvatar(
           radius: 24,
           backgroundColor: conversation.peerIsAnonymous
               ? AppColors.textTertiary
-              : AppColors.accentPurple,
+              : AppColors.accentBlue,
           backgroundImage: (!conversation.peerIsAnonymous &&
                   conversation.peerPhotoUrl != null &&
                   conversation.peerPhotoUrl!.isNotEmpty)
@@ -121,10 +136,34 @@ class ConversationDetailSheet extends ConsumerWidget {
                         color: AppColors.textTertiary,
                       ),
                 ),
+              if (canViewProfile)
+                Text(
+                  'View Profile',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.accentBlue,
+                      ),
+                ),
             ],
           ),
         ),
+        if (canViewProfile)
+          const Icon(
+            Icons.chevron_right,
+            color: AppColors.textSecondary,
+          ),
       ],
+    );
+
+    if (!canViewProfile) return row;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).pop();
+        context.push(
+          '/profile/encounter/$peerUserId?conversationId=${conversation.id}',
+        );
+      },
+      child: row,
     );
   }
 
@@ -153,10 +192,12 @@ class ConversationDetailSheet extends ConsumerWidget {
     );
   }
 
-  /// Fetches and displays the transcript and summary from the backend.
-  Widget _buildTranscriptSummary(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(conversationDetailProvider(conversation.id));
-
+  /// Displays the transcript and summary from the pre-fetched detail data.
+  Widget _buildTranscriptSummary(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<Map<String, dynamic>?> detail,
+  ) {
     return detail.when(
       loading: () => const Center(
         child: Padding(

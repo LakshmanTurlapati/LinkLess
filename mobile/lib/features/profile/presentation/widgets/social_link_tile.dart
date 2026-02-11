@@ -66,7 +66,7 @@ class SocialLinkTile extends StatelessWidget {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: const BorderSide(
-                    color: AppColors.accentPurple,
+                    color: AppColors.accentBlue,
                     width: 2,
                   ),
                 ),

@@ -9,7 +9,11 @@ import 'package:linkless/features/recording/data/database/conversation_dao.dart'
 import 'package:linkless/features/recording/data/services/audio_engine.dart';
 import 'package:linkless/features/recording/data/services/audio_session_config.dart';
 import 'package:linkless/features/recording/data/services/gps_service.dart';
+import 'package:linkless/core/services/notification_service.dart';
 import 'package:linkless/features/recording/domain/models/recording_state.dart';
+
+/// Resolves a BLE peer device ID to the peer's display initials.
+typedef PeerInitialsResolver = Future<String?> Function(String peerId);
 
 /// Orchestrates the full recording lifecycle: listens to proximity events,
 /// starts/stops audio recording, captures GPS, and persists metadata to Drift.
@@ -25,6 +29,7 @@ class RecordingService with WidgetsBindingObserver {
   final AudioEngine _audioEngine;
   final GpsService _gpsService;
   final ConversationDao _conversationDao;
+  final PeerInitialsResolver? _peerInitialsResolver;
 
   StreamSubscription<ProximityEvent>? _proximitySubscription;
   String? _activeConversationId;
@@ -41,9 +46,11 @@ class RecordingService with WidgetsBindingObserver {
     required AudioEngine audioEngine,
     required GpsService gpsService,
     required ConversationDao conversationDao,
+    PeerInitialsResolver? peerInitialsResolver,
   })  : _audioEngine = audioEngine,
         _gpsService = gpsService,
-        _conversationDao = conversationDao;
+        _conversationDao = conversationDao,
+        _peerInitialsResolver = peerInitialsResolver;
 
   /// The current recording state.
   RecordingState get state => _state;
@@ -99,6 +106,14 @@ class RecordingService with WidgetsBindingObserver {
       _activePeerId = peerId;
       _recordingStartTime = now;
       _setState(RecordingState.recording);
+      NotificationService.instance.showRecordingNotification();
+
+      // Async: resolve initials and update notification (non-blocking)
+      _peerInitialsResolver?.call(peerId).then((initials) {
+        if (initials != null && isRecording) {
+          NotificationService.instance.showRecordingNotification(initials: initials);
+        }
+      });
 
       // Start recording FIRST -- do not wait for GPS
       await _audioEngine.startRecording(conversationId);
@@ -134,6 +149,7 @@ class RecordingService with WidgetsBindingObserver {
       );
     } catch (e) {
       debugPrint('[RecordingService] Failed to start recording: $e');
+      NotificationService.instance.dismissRecordingNotification();
       _setState(RecordingState.error);
       _clearActiveState();
     }
@@ -167,6 +183,7 @@ class RecordingService with WidgetsBindingObserver {
 
       _clearActiveState();
       _setState(RecordingState.idle);
+      NotificationService.instance.dismissRecordingNotification();
     } catch (e) {
       debugPrint('[RecordingService] Failed to stop recording: $e');
       _setState(RecordingState.error);

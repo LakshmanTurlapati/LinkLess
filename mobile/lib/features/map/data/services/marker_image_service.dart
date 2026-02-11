@@ -92,7 +92,7 @@ class MarkerImageService {
         center,
         radius - borderWidth / 2,
         Paint()
-          ..color = AppColors.accentPurple
+          ..color = AppColors.accentBlue
           ..style = PaintingStyle.stroke
           ..strokeWidth = borderWidth,
       );
@@ -101,7 +101,7 @@ class MarkerImageService {
       final isUnknown = isAnonymous || (initials == null || initials.isEmpty);
       final bgColor = isUnknown
           ? const Color(0xFF9E9E9E) // Grey for unknown/anonymous
-          : AppColors.accentPurple; // Purple for known peers
+          : AppColors.accentBlue; // Blue for known peers
 
       // Draw filled background circle
       canvas.drawCircle(

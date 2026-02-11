@@ -10,6 +10,10 @@ class ConnectionRequest {
   final String conversationId;
   final String status;
   final DateTime createdAt;
+  final String? requesterDisplayName;
+  final String? requesterInitials;
+  final String? requesterPhotoUrl;
+  final bool requesterIsAnonymous;
 
   const ConnectionRequest({
     required this.id,
@@ -18,6 +22,10 @@ class ConnectionRequest {
     required this.conversationId,
     required this.status,
     required this.createdAt,
+    this.requesterDisplayName,
+    this.requesterInitials,
+    this.requesterPhotoUrl,
+    this.requesterIsAnonymous = false,
   });
 
   /// Creates a [ConnectionRequest] from a JSON map returned by the API.
@@ -29,7 +37,20 @@ class ConnectionRequest {
       conversationId: json['conversation_id'] as String,
       status: json['status'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      requesterDisplayName: json['requester_display_name'] as String?,
+      requesterInitials: json['requester_initials'] as String?,
+      requesterPhotoUrl: json['requester_photo_url'] as String?,
+      requesterIsAnonymous:
+          json['requester_is_anonymous'] as bool? ?? false,
     );
+  }
+
+  /// Display name for the requester, falling back to initials or 'Anonymous'.
+  String get displayName {
+    if (requesterIsAnonymous) {
+      return requesterInitials ?? 'Anonymous';
+    }
+    return requesterDisplayName ?? requesterInitials ?? 'Unknown';
   }
 
   /// Whether this request is still pending.

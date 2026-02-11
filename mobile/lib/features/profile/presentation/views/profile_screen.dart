@@ -34,6 +34,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Safety-net: redirect to login if the user becomes unauthenticated
+    // while this screen is mounted (e.g. logout or token expiry).
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.status == AuthStatus.unauthenticated) {
+        context.go('/auth/phone-input');
+      }
+    });
+
     final profileState = ref.watch(profileProvider);
     final profile = profileState.profile;
     final theme = Theme.of(context);
@@ -120,7 +128,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Profile photo
             CircleAvatar(
               radius: 60,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              backgroundColor: Colors.transparent,
               backgroundImage: profile.photoUrl != null
                   ? CachedNetworkImageProvider(profile.photoUrl!)
                   : null,

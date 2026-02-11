@@ -128,6 +128,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                       // Display name field -- pill-shaped
                       TextFormField(
                         controller: _nameController,
+                        style: const TextStyle(color: AppColors.backgroundDark),
                         decoration: InputDecoration(
                           labelText: 'Display Name',
                           hintText: 'Enter your name',
@@ -144,7 +145,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30),
                             borderSide: const BorderSide(
-                              color: AppColors.accentPurple,
+                              color: AppColors.accentBlue,
                               width: 2,
                             ),
                           ),

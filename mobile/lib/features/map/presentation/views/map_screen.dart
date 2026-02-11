@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import 'package:linkless/core/config/app_config.dart';
@@ -117,10 +118,57 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
     mapboxMap.setOnMapTapListener(tapListener.onMapTap);
 
+    // Reposition compass to top-right with safe margins
+    mapboxMap.compass.updateSettings(
+      CompassSettings(
+        position: OrnamentPosition.TOP_RIGHT,
+        marginTop: 100,
+        marginRight: 16,
+      ),
+    );
+
+    // Hide Mapbox logo and attribution
+    mapboxMap.logo.updateSettings(
+      LogoSettings(enabled: false),
+    );
+    mapboxMap.attribution.updateSettings(
+      AttributionSettings(enabled: false),
+    );
+
+    // Reposition scale bar to bottom-left
+    mapboxMap.scaleBar.updateSettings(
+      ScaleBarSettings(
+        position: OrnamentPosition.BOTTOM_LEFT,
+        marginLeft: 16,
+        marginBottom: 16,
+      ),
+    );
+
+    // Enable location puck (blue dot)
+    mapboxMap.location.updateSettings(
+      LocationComponentSettings(
+        enabled: true,
+        pulsingEnabled: true,
+      ),
+    );
+
+    // Fly to user's current location on initial load
+    _centerOnUserLocation();
+
     // Trigger initial data load for today's date
     if (mounted) {
       _loadConversationsForDate(ref.read(dateNavigationProvider));
     }
+  }
+
+  /// Called once the Mapbox Standard style has fully loaded.
+  /// Configures the dark/night theme and hides unnecessary labels.
+  void _onStyleLoaded(StyleLoadedEventData _) {
+    final map = _mapboxMap;
+    if (map == null) return;
+    map.style.setStyleImportConfigProperty("basemap", "lightPreset", "night");
+    map.style.setStyleImportConfigProperty("basemap", "showPointOfInterestLabels", false);
+    map.style.setStyleImportConfigProperty("basemap", "showTransitLabels", false);
   }
 
   /// Formats a [DateTime] as YYYY-MM-DD for the API query parameter.
@@ -329,7 +377,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         circleOpacity: 0.85,
         circleBlur: 0.6,
         circleStrokeWidth: 2.0,
-        circleStrokeColor: AppColors.accentPurple.value,
+        circleStrokeColor: AppColors.accentBlue.value,
       ),
     );
 
@@ -359,7 +407,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         circleOpacity: 0.85,
         circleBlur: 0.6,
         circleStrokeWidth: 2.0,
-        circleStrokeColor: AppColors.accentPurple.value,
+        circleStrokeColor: AppColors.accentBlue.value,
       ),
     );
 
@@ -433,6 +481,40 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         MapAnimationOptions(duration: 500),
       );
     });
+  }
+
+  /// Flies the camera to the user's current GPS location.
+  Future<void> _centerOnUserLocation() async {
+    try {
+      final serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      var permission = await geo.Geolocator.checkPermission();
+      if (permission == geo.LocationPermission.denied) {
+        permission = await geo.Geolocator.requestPermission();
+        if (permission == geo.LocationPermission.denied) return;
+      }
+      if (permission == geo.LocationPermission.deniedForever) return;
+
+      final position = await geo.Geolocator.getCurrentPosition(
+        locationSettings: const geo.LocationSettings(
+          accuracy: geo.LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+
+      _mapboxMap?.flyTo(
+        CameraOptions(
+          center: Point(
+            coordinates: Position(position.longitude, position.latitude),
+          ),
+          zoom: 15.0,
+        ),
+        MapAnimationOptions(duration: 500),
+      );
+    } catch (_) {
+      // Silently fail — same pattern as GpsService
+    }
   }
 
   @override
@@ -557,6 +639,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ),
               ),
             ),
+
+          // My-location button
+          Positioned(
+            bottom: 100,
+            right: 16,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: FloatingActionButton(
+                heroTag: 'myLocation',
+                onPressed: _centerOnUserLocation,
+                backgroundColor: AppColors.backgroundCard,
+                foregroundColor: AppColors.textPrimary,
+                elevation: 4,
+                child: const Icon(Icons.my_location, size: 22),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -601,12 +701,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     return MapWidget(
-      styleUri: 'mapbox://styles/mapbox/dark-v11',
+      styleUri: MapboxStyles.STANDARD,
       cameraOptions: CameraOptions(
         center: Point(coordinates: Position(-122.4194, 37.7749)),
         zoom: 12.0,
       ),
       onMapCreated: _onMapCreated,
+      onStyleLoadedListener: _onStyleLoaded,
     );
   }
 }

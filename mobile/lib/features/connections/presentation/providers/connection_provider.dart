@@ -75,18 +75,22 @@ Future<void> sendConnectionRequest(
 }
 
 /// Accepts a connection request and invalidates the relevant providers.
-Future<void> acceptConnection(
+///
+/// Returns the raw response map containing `is_mutual` and `exchanged_links`
+/// so callers can show a social links popup on mutual acceptance.
+Future<Map<String, dynamic>> acceptConnection(
   WidgetRef ref,
   String requestId, {
   String? conversationId,
 }) async {
   final apiService = ref.read(connectionApiServiceProvider);
-  await apiService.acceptRequest(requestId);
+  final response = await apiService.acceptRequest(requestId);
   if (conversationId != null) {
     ref.invalidate(connectionStatusProvider(conversationId));
   }
   ref.invalidate(connectionsListProvider);
   ref.invalidate(pendingConnectionsProvider);
+  return response;
 }
 
 /// Declines a connection request and invalidates the relevant providers.

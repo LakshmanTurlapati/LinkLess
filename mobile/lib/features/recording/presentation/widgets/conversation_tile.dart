@@ -21,7 +21,7 @@ class ConversationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: AppColors.accentPurple,
+        backgroundColor: AppColors.accentBlue,
         child: Text(
           conversation.peerId.isNotEmpty
               ? conversation.peerId[0].toUpperCase()
@@ -88,7 +88,7 @@ class ConversationTile extends StatelessWidget {
           height: 16,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: AppColors.accentPurple,
+            color: AppColors.accentBlue,
           ),
         );
       case 'uploaded':

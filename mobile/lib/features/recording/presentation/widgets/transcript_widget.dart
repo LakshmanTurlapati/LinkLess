@@ -24,7 +24,7 @@ class TranscriptWidget extends StatelessWidget {
     Colors.blue,
     Colors.green,
     Colors.orange,
-    Colors.purple,
+    Colors.indigo,
     Colors.teal,
   ];
 
