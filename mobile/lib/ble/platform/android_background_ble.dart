@@ -23,14 +23,14 @@ class AndroidBackgroundBle with WidgetsBindingObserver {
   static const String _notificationChannelId = 'linkless_ble';
 
   /// Notification channel name shown in Android settings.
-  static const String _notificationChannelName = 'Linkless BLE';
+  static const String _notificationChannelName = 'LinkLess BLE';
 
   /// Notification channel description shown in Android settings.
   static const String _notificationChannelDescription =
-      'Detecting nearby Linkless users';
+      'Detecting nearby LinkLess users';
 
   /// Notification title shown in the persistent notification.
-  static const String _notificationTitle = 'Linkless Active';
+  static const String _notificationTitle = 'LinkLess Active';
 
   /// Notification body text shown in the persistent notification.
   static const String _notificationBody = 'Detecting nearby users...';
