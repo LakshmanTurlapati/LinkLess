@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkLess — Le Animation</title>
+<style>
+    :root {
+        --text-color: #0f1229;
+        --duration: 3.5s;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #f8f9fa;
+        overflow: hidden;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .le-svg {
+        width: min(80vw, 500px);
+        overflow: visible;
+    }
+
+    /* Hide strokes until JS sets the real dasharray values */
+    .draw {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 9999;
+        stroke-dashoffset: 9999;
+    }
+
+    #text-path {
+        stroke: var(--text-color);
+        stroke-width: 9;
+    }
+
+    #glow-trail {
+        stroke: rgba(100, 160, 255, 0.12);
+        stroke-width: 22;
+        filter: url(#trail-blur);
+    }
+
+    .hint {
+        position: fixed;
+        bottom: 24px;
+        color: #aaa;
+        font-family: -apple-system, system-ui, sans-serif;
+        font-size: 13px;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+    }
+
+    .hint.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<svg class="le-svg" viewBox="0 0 241 273" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <!-- Colored glow for sparkle -->
+        <filter id="sparkle-glow" x="-300%" y="-300%" width="700%" height="700%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur1"/>
+            <feFlood flood-color="#6FA8FF" flood-opacity="0.8" result="c1"/>
+            <feComposite in="c1" in2="blur1" operator="in" result="cb1"/>
+            <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="blur2"/>
+            <feFlood flood-color="#4A8BFF" flood-opacity="0.4" result="c2"/>
+            <feComposite in="c2" in2="blur2" operator="in" result="cb2"/>
+            <feMerge>
+                <feMergeNode in="cb2"/>
+                <feMergeNode in="cb1"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <!-- Soft blur for the trailing glow path -->
+        <filter id="trail-blur" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="5"/>
+        </filter>
+    </defs>
+
+    <!-- DEBUG: Semi-transparent reference overlay for path alignment -->
+    <image href="../assets/Positive Submark - No BG.png"
+           x="-93" y="-52" width="450" height="450"
+           opacity="0.3" pointer-events="none"/>
+
+    <!-- Subtle blue glow drawn slightly behind the main stroke -->
+    <path id="glow-trail" class="draw"
+        d="M 34 160
+           C 36 155, 48 135, 55 115
+           C 62 95, 66 65, 68 50
+           C 69 38, 72 22, 80 18
+           C 90 14, 98 24, 96 40
+           C 93 56, 82 58, 75 55
+           C 70 62, 65 85, 62 110
+           C 59 135, 56 165, 55 190
+           C 54 210, 54 235, 52 248
+           C 50 260, 42 263, 40 256
+           C 38 248, 40 235, 46 232
+           C 55 228, 75 222, 95 218
+           C 110 215, 125 212, 135 204
+           C 138 193, 142 165, 148 145
+           C 152 130, 162 126, 166 133
+           C 170 142, 168 170, 162 190
+           C 158 205, 150 215, 148 217
+           C 152 218, 190 217, 231 217" />
+
+    <!-- Main "Le" stroke -->
+    <path id="text-path" class="draw"
+        d="M 34 160
+           C 36 155, 48 135, 55 115
+           C 62 95, 66 65, 68 50
+           C 69 38, 72 22, 80 18
+           C 90 14, 98 24, 96 40
+           C 93 56, 82 58, 75 55
+           C 70 62, 65 85, 62 110
+           C 59 135, 56 165, 55 190
+           C 54 210, 54 235, 52 248
+           C 50 260, 42 263, 40 256
+           C 38 248, 40 235, 46 232
+           C 55 228, 75 222, 95 218
+           C 110 215, 125 212, 135 204
+           C 138 193, 142 165, 148 145
+           C 152 130, 162 126, 166 133
+           C 170 142, 168 170, 162 190
+           C 158 205, 150 215, 148 217
+           C 152 218, 190 217, 231 217" />
+
+    <!-- Sparkle group that follows the drawing tip -->
+    <g class="sparkle">
+        <!-- Bright core -->
+        <circle r="4" fill="white" filter="url(#sparkle-glow)">
+            <animateMotion dur="0.5s" fill="freeze"
+                calcMode="spline" keyTimes="0;1" keySplines="0 0 0.58 1">
+                <mpath href="#text-path"/>
+            </animateMotion>
+            <animate attributeName="opacity" begin="0.5s" dur="0.4s" to="0" fill="freeze"/>
+        </circle>
+        <!-- Trailing particle 1 -->
+        <circle r="2.5" fill="rgba(111,168,255,0.7)" filter="url(#sparkle-glow)">
+            <animateMotion dur="0.5s" fill="freeze"
+                calcMode="spline" keyTimes="0;1" keySplines="0 0 0.58 1" begin="0.04s">
+                <mpath href="#text-path"/>
+            </animateMotion>
+            <animate attributeName="opacity" begin="0.54s" dur="0.3s" to="0" fill="freeze"/>
+        </circle>
+        <!-- Trailing particle 2 -->
+        <circle r="1.5" fill="rgba(111,168,255,0.4)" filter="url(#sparkle-glow)">
+            <animateMotion dur="0.5s" fill="freeze"
+                calcMode="spline" keyTimes="0;1" keySplines="0 0 0.58 1" begin="0.08s">
+                <mpath href="#text-path"/>
+            </animateMotion>
+            <animate attributeName="opacity" begin="0.58s" dur="0.3s" to="0" fill="freeze"/>
+        </circle>
+    </g>
+</svg>
+
+<div class="hint">Click anywhere to replay</div>
+
+<script>
+(function () {
+    var DURATION = 0.5;
+
+    /* Inject the draw keyframes once */
+    var sheet = document.createElement('style');
+    sheet.textContent = '@keyframes draw{to{stroke-dashoffset:0}}';
+    document.head.appendChild(sheet);
+
+    function init() {
+        var textPath  = document.getElementById('text-path');
+        var glowTrail = document.getElementById('glow-trail');
+        var len = textPath.getTotalLength();
+
+        /* Apply accurate dash values and kick off the CSS animation */
+        [textPath, glowTrail].forEach(function (el) {
+            el.style.strokeDasharray  = len;
+            el.style.strokeDashoffset = len;
+            el.style.animation = 'draw ' + DURATION + 's ease-out forwards';
+        });
+
+        /* Show the replay hint after everything finishes */
+        setTimeout(function () {
+            document.querySelector('.hint').classList.add('visible');
+        }, (DURATION + 0.8) * 1000);
+    }
+
+    init();
+
+    /* Click-to-replay: clone the SVG so all animations restart fresh */
+    document.addEventListener('click', function () {
+        document.querySelector('.hint').classList.remove('visible');
+        var svg   = document.querySelector('.le-svg');
+        var clone = svg.cloneNode(true);
+        svg.parentNode.replaceChild(clone, svg);
+        requestAnimationFrame(init);
+    });
+})();
+</script>
+
+</body>
+</html>
