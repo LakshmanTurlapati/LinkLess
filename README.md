@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="assets/Primary%20Logo%20-Blue%20BG.png" alt="LinkLess" width="400" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/Primary%20Logo%20-%20No%20BG%20Dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="assets/Primary%20Logo%20-%20No%20BG.png" />
+    <img src="assets/Primary%20Logo%20-%20No%20BG.png" alt="LinkLess" width="400" />
+  </picture>
 </p>
 
 <p align="center">
@@ -285,95 +289,6 @@ LinkLess/
         │   └── sync/               # Cloud sync engine & upload service
         └── router/                  # GoRouter navigation
 ```
-
----
-
-## API Endpoints
-
-All endpoints are prefixed with `/api/v1`.
-
-### Auth
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/auth/send-otp` | No | Send OTP code to a phone number via Twilio |
-| `POST` | `/auth/verify-otp` | No | Verify OTP and receive access/refresh tokens |
-| `POST` | `/auth/refresh` | No | Exchange refresh token for new token pair |
-| `POST` | `/auth/logout` | Yes | Revoke all refresh tokens for the user |
-
-### Profile
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/profile` | Yes | Create user profile |
-| `GET` | `/profile` | Yes | Get current user's profile with social links |
-| `PATCH` | `/profile` | Yes | Update profile fields (display name, photo, anonymous mode) |
-| `POST` | `/profile/photo/presign` | Yes | Get presigned URL for photo upload |
-| `PUT` | `/profile/social-links` | Yes | Replace all social links |
-| `GET` | `/profile/social-links` | Yes | Get all social links |
-
-### Conversations
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/conversations` | Yes | Create conversation with GPS coords |
-| `POST` | `/conversations/{id}/confirm-upload` | Yes | Confirm audio uploaded, trigger transcription |
-| `GET` | `/conversations` | Yes | List all conversations (newest first) |
-| `GET` | `/conversations/map?date=YYYY-MM-DD` | Yes | Get conversations for map display on a date |
-| `GET` | `/conversations/search?q=...` | Yes | Full-text search across transcripts and summaries |
-| `GET` | `/conversations/{id}` | Yes | Get conversation with transcript and summary |
-
-### Connections
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/connections/request` | Yes | Send connection request for a conversation |
-| `POST` | `/connections/{id}/accept` | Yes | Accept request; if mutual, exchange socials |
-| `POST` | `/connections/{id}/decline` | Yes | Decline a connection request |
-| `GET` | `/connections` | Yes | List all established connections |
-| `GET` | `/connections/pending` | Yes | List incoming pending requests |
-| `GET` | `/connections/status?conversation_id=` | Yes | Check connection status for a conversation |
-| `POST` | `/connections/block` | Yes | Block a user |
-| `DELETE` | `/connections/block/{user_id}` | Yes | Unblock a user |
-| `GET` | `/connections/blocked` | Yes | List blocked users |
-
-### Uploads & Health
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/uploads/presign` | No | Generate presigned upload URL for Tigris S3 |
-| `GET` | `/health` | No | Health check (API + database + PostGIS status) |
-
----
-
-## Environment Variables
-
-### Backend
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+asyncpg://linkless:linkless@localhost:5432/linkless` | PostgreSQL connection string |
-| `REDIS_URL` | `redis://localhost:6379` | Redis URL for ARQ task queue |
-| `JWT_SECRET_KEY` | — | Secret key for HS256 JWT signing |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token TTL |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | Refresh token TTL |
-| `TWILIO_ACCOUNT_SID` | — | Twilio Account SID |
-| `TWILIO_AUTH_TOKEN` | — | Twilio Auth Token |
-| `TWILIO_VERIFY_SERVICE_SID` | — | Twilio Verify Service SID |
-| `TWILIO_TEST_MODE` | `false` | Bypass SMS in development |
-| `OPENAI_API_KEY` | — | OpenAI API key (Whisper transcription) |
-| `XAI_API_KEY` | — | xAI API key (Grok summarization) |
-| `TIGRIS_ENDPOINT` | `https://fly.storage.tigris.dev` | S3-compatible storage endpoint |
-| `TIGRIS_BUCKET` | `linkless-audio` | Storage bucket name |
-| `AWS_ACCESS_KEY_ID` | — | Tigris access key |
-| `AWS_SECRET_ACCESS_KEY` | — | Tigris secret key |
-
-### Mobile (build-time)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_BASE_URL` | `https://linkless-api.fly.dev/api/v1` | Backend API base URL |
-| `MAPBOX_ACCESS_TOKEN` | — | Mapbox public token for map rendering |
 
 ---
 
