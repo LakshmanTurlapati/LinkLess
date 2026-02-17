@@ -27,9 +27,10 @@ class UploadService {
 
   /// Uploads a conversation's audio file to Tigris and confirms the upload.
   ///
+  /// Returns the server-assigned conversation ID for storage in the local DB.
   /// Throws [DioException] on network failures for retry logic in SyncEngine.
   /// Throws [FileSystemException] if the audio file does not exist.
-  Future<void> uploadConversation(ConversationEntry conversation) async {
+  Future<String> uploadConversation(ConversationEntry conversation) async {
     // Step 1: Create conversation on backend to get presigned upload URL
     final createResponse = await _apiService.createConversation(
       localId: conversation.id,
@@ -76,5 +77,7 @@ class UploadService {
     debugPrint(
       'UploadService: upload confirmed for conversation $conversationId',
     );
+
+    return conversationId;
   }
 }

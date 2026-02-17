@@ -24,10 +24,17 @@ class ConversationApiService {
     int? durationSeconds,
   }) async {
     final data = <String, dynamic>{
-      'local_id': localId,
-      'peer_id': peerId,
       'started_at': startedAt.toUtc().toIso8601String(),
     };
+
+    // Only send peer_user_id if it looks like a valid UUID
+    // (not a raw BLE device ID like 42:7E:1D:38:E0:7B)
+    final uuidPattern = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    if (uuidPattern.hasMatch(peerId)) {
+      data['peer_user_id'] = peerId;
+    }
 
     if (latitude != null) data['latitude'] = latitude;
     if (longitude != null) data['longitude'] = longitude;

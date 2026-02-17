@@ -33,10 +33,12 @@ final uploadServiceProvider = Provider<UploadService>((ref) {
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final dao = ref.watch(conversationDaoProvider);
   final uploadService = ref.watch(uploadServiceProvider);
+  final apiService = ref.watch(conversationApiServiceProvider);
 
   final syncEngine = SyncEngine(
     dao: dao,
     uploadService: uploadService,
+    apiService: apiService,
   );
 
   // Fire-and-forget initialization (matching RecordingService pattern)

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:linkless/features/recording/data/database/conversation_dao.dart';
+import 'package:linkless/features/sync/data/services/conversation_api_service.dart';
 import 'package:linkless/features/sync/data/services/upload_service.dart';
 
 /// Connectivity-aware engine that automatically uploads pending conversations.
@@ -20,15 +21,22 @@ import 'package:linkless/features/sync/data/services/upload_service.dart';
 class SyncEngine {
   final ConversationDao _dao;
   final UploadService _uploadService;
+  final ConversationApiService _apiService;
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  Timer? _pollTimer;
   bool _isSyncing = false;
+  bool _isPolling = false;
+
+  static const _pollInterval = Duration(seconds: 30);
 
   SyncEngine({
     required ConversationDao dao,
     required UploadService uploadService,
+    required ConversationApiService apiService,
   })  : _dao = dao,
-        _uploadService = uploadService;
+        _uploadService = uploadService,
+        _apiService = apiService;
 
   /// Starts monitoring connectivity and processes any pending uploads.
   ///
@@ -49,6 +57,14 @@ class SyncEngine {
 
     // Process any pending uploads immediately (we may already be online)
     await _processPendingUploads();
+
+    // Start periodic polling for pending uploads and transcription completion
+    _pollTimer = Timer.periodic(_pollInterval, (_) {
+      _processPendingUploads();
+      _pollTranscriptionStatus();
+    });
+    // Run an initial poll immediately
+    _pollTranscriptionStatus();
   }
 
   /// Processes all pending conversation uploads sequentially.
@@ -76,10 +92,13 @@ class SyncEngine {
         await _dao.updateSyncStatus(conversation.id, 'uploading');
 
         try {
-          await _uploadService.uploadConversation(conversation);
+          final serverId =
+              await _uploadService.uploadConversation(conversation);
+          await _dao.updateServerId(conversation.id, serverId);
           await _dao.updateSyncStatus(conversation.id, 'uploaded');
           debugPrint(
-            'SyncEngine: uploaded conversation ${conversation.id}',
+            'SyncEngine: uploaded conversation ${conversation.id} '
+            '(server: $serverId)',
           );
         } on DioException catch (e) {
           await _dao.updateSyncStatus(conversation.id, 'failed');
@@ -97,6 +116,63 @@ class SyncEngine {
       }
     } finally {
       _isSyncing = false;
+    }
+  }
+
+  /// Polls the backend for transcription completion on uploaded conversations.
+  ///
+  /// Checks each conversation with 'uploaded' status against the backend.
+  /// If the backend returns a non-null transcript, updates status to 'completed'.
+  /// If the backend indicates failure, updates status to 'failed'.
+  /// Network errors are logged and skipped (retried next cycle).
+  Future<void> _pollTranscriptionStatus() async {
+    if (_isPolling) return;
+    _isPolling = true;
+
+    try {
+      final uploadedConversations = await _dao.getUploadedConversations();
+
+      if (uploadedConversations.isEmpty) return;
+
+      debugPrint(
+        'SyncEngine: polling transcription status for '
+        '${uploadedConversations.length} conversation(s)',
+      );
+
+      for (final conversation in uploadedConversations) {
+        final idForApi = conversation.serverId ?? conversation.id;
+        try {
+          final detail =
+              await _apiService.getConversationDetail(idForApi);
+          final transcript = detail['transcript'];
+          final status = detail['status'] as String?;
+
+          if (transcript != null &&
+              transcript.toString().isNotEmpty &&
+              transcript.toString() != '[]') {
+            await _dao.updateSyncStatus(conversation.id, 'completed');
+            debugPrint(
+              'SyncEngine: transcription completed for ${conversation.id}',
+            );
+          } else if (status == 'failed' || status == 'error') {
+            await _dao.updateSyncStatus(conversation.id, 'failed');
+            debugPrint(
+              'SyncEngine: transcription failed for ${conversation.id}',
+            );
+          }
+        } on DioException catch (e) {
+          debugPrint(
+            'SyncEngine: poll error for ${conversation.id} -- ${e.message}',
+          );
+          // Skip this conversation, try again next cycle
+        } on Exception catch (e) {
+          debugPrint(
+            'SyncEngine: poll error for ${conversation.id} -- $e',
+          );
+        }
+      }
+    } finally {
+      _isPolling = false;
     }
   }
 
@@ -122,10 +198,58 @@ class SyncEngine {
     await _processPendingUploads();
   }
 
-  /// Cancels the connectivity subscription and stops monitoring.
+  /// Triggers an immediate sync cycle from the debug UI.
+  ///
+  /// Useful after manually resetting a conversation's status to 'pending'.
+  Future<void> syncNow() async {
+    await _processPendingUploads();
+  }
+
+  /// Polls the backend for a single conversation's transcription status.
+  ///
+  /// Used by the debug UI to manually check if a transcript is ready
+  /// without waiting for the next automatic poll cycle.
+  Future<void> pollSingleConversation(String localId) async {
+    try {
+      final conversation = await _dao.getConversation(localId);
+      if (conversation == null) {
+        debugPrint('SyncEngine: pollSingle -- conversation $localId not found');
+        return;
+      }
+
+      final idForApi = conversation.serverId ?? conversation.id;
+      final detail = await _apiService.getConversationDetail(idForApi);
+      final transcript = detail['transcript'];
+      final status = detail['status'] as String?;
+
+      if (transcript != null &&
+          transcript.toString().isNotEmpty &&
+          transcript.toString() != '[]') {
+        await _dao.updateSyncStatus(localId, 'completed');
+        debugPrint(
+          'SyncEngine: pollSingle -- transcription completed for $localId',
+        );
+      } else if (status == 'failed' || status == 'error') {
+        await _dao.updateSyncStatus(localId, 'failed');
+        debugPrint(
+          'SyncEngine: pollSingle -- transcription failed for $localId',
+        );
+      } else {
+        debugPrint(
+          'SyncEngine: pollSingle -- still processing $localId',
+        );
+      }
+    } catch (e) {
+      debugPrint('SyncEngine: pollSingle error for $localId -- $e');
+    }
+  }
+
+  /// Cancels the connectivity subscription, poll timer, and stops monitoring.
   void dispose() {
     _connectivitySub?.cancel();
     _connectivitySub = null;
+    _pollTimer?.cancel();
+    _pollTimer = null;
     debugPrint('SyncEngine: disposed');
   }
 }
