@@ -197,7 +197,8 @@ class PlaybackScreen extends ConsumerWidget {
     WidgetRef ref,
     ConversationLocal conversation,
   ) {
-    final detail = ref.watch(conversationDetailProvider(conversationId));
+    final detailId = conversation.serverId ?? conversationId;
+    final detail = ref.watch(conversationDetailProvider(detailId));
 
     return detail.when(
       loading: () => const Center(
@@ -231,7 +232,7 @@ class PlaybackScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () {
-                  ref.invalidate(conversationDetailProvider(conversationId));
+                  ref.invalidate(conversationDetailProvider(detailId));
                 },
                 child: const Text('Retry'),
               ),
@@ -330,7 +331,8 @@ class PlaybackScreen extends ConsumerWidget {
     WidgetRef ref,
     ConversationLocal conversation,
   ) {
-    final detail = ref.watch(conversationDetailProvider(conversationId));
+    final detailId = conversation.serverId ?? conversationId;
+    final detail = ref.watch(conversationDetailProvider(detailId));
 
     return detail.when(
       loading: () => const SizedBox.shrink(),

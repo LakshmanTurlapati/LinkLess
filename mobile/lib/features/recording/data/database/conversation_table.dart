@@ -9,6 +9,7 @@ class ConversationEntries extends Table {
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get endedAt => dateTime().nullable()();
   IntColumn get durationSeconds => integer().nullable()();
+  TextColumn get serverId => text().nullable()();
   TextColumn get syncStatus =>
       text().withDefault(const Constant('pending'))();
 

@@ -51,6 +51,14 @@ class ConversationDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
+  /// Update the peer ID of a conversation (e.g., when GATT exchange resolves
+  /// a device ID to a real user ID).
+  Future<void> updatePeerId(String id, String peerId) {
+    return (update(conversationEntries)..where((t) => t.id.equals(id))).write(
+      ConversationEntriesCompanion(peerId: Value(peerId)),
+    );
+  }
+
   /// Delete a conversation by its ID.
   Future<void> deleteConversation(String id) {
     return (delete(conversationEntries)..where((t) => t.id.equals(id))).go();
@@ -66,6 +74,27 @@ class ConversationDao extends DatabaseAccessor<AppDatabase>
           ..where((t) =>
               t.syncStatus.equals('pending') &
               t.audioFilePath.isNotNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
+        .get();
+  }
+
+  /// Store the server-assigned conversation ID after upload.
+  Future<void> updateServerId(String localId, String serverId) {
+    return (update(conversationEntries)..where((t) => t.id.equals(localId)))
+        .write(
+      ConversationEntriesCompanion(
+        serverId: Value(serverId),
+      ),
+    );
+  }
+
+  /// Get conversations with 'uploaded' sync status, oldest first.
+  ///
+  /// Returns conversations whose audio has been uploaded but whose
+  /// transcription has not yet completed, ordered by startedAt ascending.
+  Future<List<ConversationEntry>> getUploadedConversations() {
+    return (select(conversationEntries)
+          ..where((t) => t.syncStatus.equals('uploaded'))
           ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
         .get();
   }

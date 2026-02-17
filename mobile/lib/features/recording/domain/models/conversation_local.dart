@@ -7,6 +7,7 @@ import 'package:linkless/features/recording/data/database/app_database.dart';
 /// audio availability, and completion status.
 class ConversationLocal {
   final String id;
+  final String? serverId;
   final String peerId;
   final String? audioFilePath;
   final double? latitude;
@@ -18,6 +19,7 @@ class ConversationLocal {
 
   const ConversationLocal({
     required this.id,
+    this.serverId,
     required this.peerId,
     this.audioFilePath,
     this.latitude,
@@ -32,6 +34,7 @@ class ConversationLocal {
   factory ConversationLocal.fromEntry(ConversationEntry entry) {
     return ConversationLocal(
       id: entry.id,
+      serverId: entry.serverId,
       peerId: entry.peerId,
       audioFilePath: entry.audioFilePath,
       latitude: entry.latitude,

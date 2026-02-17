@@ -93,6 +93,17 @@ class $ConversationEntriesTable extends ConversationEntries
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -115,6 +126,7 @@ class $ConversationEntriesTable extends ConversationEntries
     startedAt,
     endedAt,
     durationSeconds,
+    serverId,
     syncStatus,
   ];
   @override
@@ -186,6 +198,12 @@ class $ConversationEntriesTable extends ConversationEntries
         ),
       );
     }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -236,6 +254,10 @@ class $ConversationEntriesTable extends ConversationEntries
         DriftSqlType.int,
         data['${effectivePrefix}duration_seconds'],
       ),
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
       syncStatus:
           attachedDatabase.typeMapping.read(
             DriftSqlType.string,
@@ -260,6 +282,7 @@ class ConversationEntry extends DataClass
   final DateTime startedAt;
   final DateTime? endedAt;
   final int? durationSeconds;
+  final String? serverId;
   final String syncStatus;
   const ConversationEntry({
     required this.id,
@@ -270,6 +293,7 @@ class ConversationEntry extends DataClass
     required this.startedAt,
     this.endedAt,
     this.durationSeconds,
+    this.serverId,
     required this.syncStatus,
   });
   @override
@@ -292,6 +316,9 @@ class ConversationEntry extends DataClass
     }
     if (!nullToAbsent || durationSeconds != null) {
       map['duration_seconds'] = Variable<int>(durationSeconds);
+    }
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
     }
     map['sync_status'] = Variable<String>(syncStatus);
     return map;
@@ -322,6 +349,10 @@ class ConversationEntry extends DataClass
           durationSeconds == null && nullToAbsent
               ? const Value.absent()
               : Value(durationSeconds),
+      serverId:
+          serverId == null && nullToAbsent
+              ? const Value.absent()
+              : Value(serverId),
       syncStatus: Value(syncStatus),
     );
   }
@@ -340,6 +371,7 @@ class ConversationEntry extends DataClass
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
       durationSeconds: serializer.fromJson<int?>(json['durationSeconds']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
     );
   }
@@ -355,6 +387,7 @@ class ConversationEntry extends DataClass
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'endedAt': serializer.toJson<DateTime?>(endedAt),
       'durationSeconds': serializer.toJson<int?>(durationSeconds),
+      'serverId': serializer.toJson<String?>(serverId),
       'syncStatus': serializer.toJson<String>(syncStatus),
     };
   }
@@ -368,6 +401,7 @@ class ConversationEntry extends DataClass
     DateTime? startedAt,
     Value<DateTime?> endedAt = const Value.absent(),
     Value<int?> durationSeconds = const Value.absent(),
+    Value<String?> serverId = const Value.absent(),
     String? syncStatus,
   }) => ConversationEntry(
     id: id ?? this.id,
@@ -380,6 +414,7 @@ class ConversationEntry extends DataClass
     endedAt: endedAt.present ? endedAt.value : this.endedAt,
     durationSeconds:
         durationSeconds.present ? durationSeconds.value : this.durationSeconds,
+    serverId: serverId.present ? serverId.value : this.serverId,
     syncStatus: syncStatus ?? this.syncStatus,
   );
   ConversationEntry copyWithCompanion(ConversationEntriesCompanion data) {
@@ -398,6 +433,7 @@ class ConversationEntry extends DataClass
           data.durationSeconds.present
               ? data.durationSeconds.value
               : this.durationSeconds,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
       syncStatus:
           data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
     );
@@ -414,6 +450,7 @@ class ConversationEntry extends DataClass
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('durationSeconds: $durationSeconds, ')
+          ..write('serverId: $serverId, ')
           ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
@@ -429,6 +466,7 @@ class ConversationEntry extends DataClass
     startedAt,
     endedAt,
     durationSeconds,
+    serverId,
     syncStatus,
   );
   @override
@@ -443,6 +481,7 @@ class ConversationEntry extends DataClass
           other.startedAt == this.startedAt &&
           other.endedAt == this.endedAt &&
           other.durationSeconds == this.durationSeconds &&
+          other.serverId == this.serverId &&
           other.syncStatus == this.syncStatus);
 }
 
@@ -455,6 +494,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
   final Value<DateTime> startedAt;
   final Value<DateTime?> endedAt;
   final Value<int?> durationSeconds;
+  final Value<String?> serverId;
   final Value<String> syncStatus;
   final Value<int> rowid;
   const ConversationEntriesCompanion({
@@ -466,6 +506,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
     this.startedAt = const Value.absent(),
     this.endedAt = const Value.absent(),
     this.durationSeconds = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -478,6 +519,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
     required DateTime startedAt,
     this.endedAt = const Value.absent(),
     this.durationSeconds = const Value.absent(),
+    this.serverId = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -492,6 +534,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
     Expression<DateTime>? startedAt,
     Expression<DateTime>? endedAt,
     Expression<int>? durationSeconds,
+    Expression<String>? serverId,
     Expression<String>? syncStatus,
     Expression<int>? rowid,
   }) {
@@ -504,6 +547,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
       if (startedAt != null) 'started_at': startedAt,
       if (endedAt != null) 'ended_at': endedAt,
       if (durationSeconds != null) 'duration_seconds': durationSeconds,
+      if (serverId != null) 'server_id': serverId,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (rowid != null) 'rowid': rowid,
     });
@@ -518,6 +562,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
     Value<DateTime>? startedAt,
     Value<DateTime?>? endedAt,
     Value<int?>? durationSeconds,
+    Value<String?>? serverId,
     Value<String>? syncStatus,
     Value<int>? rowid,
   }) {
@@ -530,6 +575,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
       durationSeconds: durationSeconds ?? this.durationSeconds,
+      serverId: serverId ?? this.serverId,
       syncStatus: syncStatus ?? this.syncStatus,
       rowid: rowid ?? this.rowid,
     );
@@ -562,6 +608,9 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
     if (durationSeconds.present) {
       map['duration_seconds'] = Variable<int>(durationSeconds.value);
     }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -582,6 +631,7 @@ class ConversationEntriesCompanion extends UpdateCompanion<ConversationEntry> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('durationSeconds: $durationSeconds, ')
+          ..write('serverId: $serverId, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -901,6 +951,7 @@ typedef $$ConversationEntriesTableCreateCompanionBuilder =
       required DateTime startedAt,
       Value<DateTime?> endedAt,
       Value<int?> durationSeconds,
+      Value<String?> serverId,
       Value<String> syncStatus,
       Value<int> rowid,
     });
@@ -914,6 +965,7 @@ typedef $$ConversationEntriesTableUpdateCompanionBuilder =
       Value<DateTime> startedAt,
       Value<DateTime?> endedAt,
       Value<int?> durationSeconds,
+      Value<String?> serverId,
       Value<String> syncStatus,
       Value<int> rowid,
     });
@@ -964,6 +1016,11 @@ class $$ConversationEntriesTableFilterComposer
 
   ColumnFilters<int> get durationSeconds => $composableBuilder(
     column: $table.durationSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1022,6 +1079,11 @@ class $$ConversationEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -1064,6 +1126,9 @@ class $$ConversationEntriesTableAnnotationComposer
     column: $table.durationSeconds,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
 
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
@@ -1125,6 +1190,7 @@ class $$ConversationEntriesTableTableManager
                 Value<DateTime> startedAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<int?> durationSeconds = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationEntriesCompanion(
@@ -1136,6 +1202,7 @@ class $$ConversationEntriesTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 durationSeconds: durationSeconds,
+                serverId: serverId,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),
@@ -1149,6 +1216,7 @@ class $$ConversationEntriesTableTableManager
                 required DateTime startedAt,
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<int?> durationSeconds = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ConversationEntriesCompanion.insert(
@@ -1160,6 +1228,7 @@ class $$ConversationEntriesTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 durationSeconds: durationSeconds,
+                serverId: serverId,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),

@@ -36,8 +36,12 @@ final recordingServiceProvider = Provider<RecordingService>((ref) {
     conversationDao: conversationDao,
   );
 
-  // Wire the service to BleManager's proximity event stream.
-  service.initialize(BleManager.instance.stateMachine.events);
+  // Wire the service to BleManager's proximity event stream and exchange
+  // stream so peer IDs are resolved from device UUIDs to real user IDs.
+  service.initialize(
+    BleManager.instance.stateMachine.events,
+    exchangeEvents: BleManager.instance.proximityStream,
+  );
 
   ref.onDispose(() => service.dispose());
 
@@ -47,6 +51,33 @@ final recordingServiceProvider = Provider<RecordingService>((ref) {
 /// Streams the current RecordingState for UI consumption.
 final recordingStateProvider = StreamProvider<RecordingState>((ref) {
   return ref.watch(recordingServiceProvider).stateStream;
+});
+
+/// Streams the active peer ID for reactive UI consumption.
+///
+/// Directly watches RecordingService.peerIdStream, which emits:
+/// - The raw BLE device UUID when recording starts (from DETECTED event)
+/// - The resolved real user ID when GATT exchange completes
+/// - null when recording stops
+///
+/// This is more reliable than the previous approach of re-emitting the
+/// recording state and reading activePeerId synchronously, because it uses
+/// a dedicated stream that emits on every peer ID change.
+final activePeerIdProvider = StreamProvider<String?>((ref) {
+  final service = ref.watch(recordingServiceProvider);
+  return service.peerIdStream;
+});
+
+/// Whether the active peer ID has been resolved to a real user ID (not a
+/// raw BLE device UUID). Rebuilds whenever recording state changes.
+///
+/// This is exposed as a separate provider so activePeerProfileProvider can
+/// watch it reactively instead of using a non-reactive ref.read.
+final isPeerIdResolvedProvider = Provider<bool>((ref) {
+  // Watch both recording state and peer ID to trigger rebuilds.
+  ref.watch(recordingStateProvider);
+  ref.watch(activePeerIdProvider);
+  return ref.read(recordingServiceProvider).isPeerIdResolved;
 });
 
 /// Streams the list of all conversations as domain models.
