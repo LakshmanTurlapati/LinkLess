@@ -1,6 +1,7 @@
 """Profile API routes for CRUD, photo upload, and social links."""
 
 import logging
+import uuid
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -166,3 +167,19 @@ async def get_social_links(
     return [
         SocialLinkResponse.model_validate(link) for link in links
     ]
+
+
+@router.get("/{user_id}", response_model=ProfileResponse)
+async def get_peer_profile(
+    user_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ProfileResponse:
+    """Get another user's public profile by their ID."""
+    profile = await _profile_service.get_profile(user_id, db)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found",
+        )
+    return ProfileResponse.from_user(profile)

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 class ConversationCreate(BaseModel):
     """Request body for creating a new conversation."""
 
-    user_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
     peer_user_id: Optional[uuid.UUID] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
