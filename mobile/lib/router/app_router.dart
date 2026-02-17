@@ -140,12 +140,6 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
 
-      // BLE debug screen (dev tool, outside the shell, no auth required).
-      GoRoute(
-        path: '/ble-debug',
-        builder: (context, state) => const BleDebugScreen(),
-      ),
-
       // Main app shell with bottom navigation.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -173,6 +167,14 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: '/profile',
                 builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/ble-debug',
+                builder: (context, state) => const BleDebugScreen(),
               ),
             ],
           ),

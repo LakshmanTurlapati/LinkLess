@@ -47,6 +47,11 @@ class ScaffoldWithNavBar extends StatelessWidget {
             selectedIcon: Icon(Icons.person, color: AppColors.accentBlue),
             label: 'Profile',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.bug_report_outlined, color: AppColors.textTertiary),
+            selectedIcon: Icon(Icons.bug_report, color: AppColors.accentBlue),
+            label: 'Debug',
+          ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:linkless/ble/ble_manager.dart';
 import 'package:linkless/core/services/notification_service.dart';
 import 'package:linkless/features/auth/presentation/providers/auth_provider.dart';
+import 'package:linkless/features/proximity/services/proximity_notification_handler.dart';
 import 'package:linkless/features/connections/presentation/providers/block_provider.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
 
@@ -140,6 +141,10 @@ Future<void> _initializeServices(Ref ref) async {
     if (permissions.allGranted) {
       await BleManager.instance.start(userId);
       debugPrint('[AppInit] BLE initialized and started');
+
+      final proximityHandler = ProximityNotificationHandler();
+      await proximityHandler.initialize();
+      debugPrint('[AppInit] Proximity notification handler initialized');
     } else {
       debugPrint(
         '[AppInit] BLE permissions denied: ${permissions.deniedPermissions}',
