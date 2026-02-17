@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="assets/app%20icon.png" alt="LinkLess" width="120" />
+  <img src="assets/Primary%20Logo%20-Blue%20BG.png" alt="LinkLess" width="400" />
 </p>
-
-<h1 align="center">LinkLess</h1>
 
 <p align="center">
   <em>Never forget a connection.</em>
@@ -28,6 +26,9 @@
 </p>
 
 ---
+
+> [!IMPORTANT]
+> LinkLess is under active development and not yet available on the App Store or Google Play. Recording features require two-party consent where required by law.
 
 ## The Problem
 
