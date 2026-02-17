@@ -46,3 +46,6 @@ app.*.map.json
 
 # Local dev environment (contains API keys)
 .env*.json
+!.env.example.json
+lib/core/config/env.dart
+!lib/core/config/env.example.dart
