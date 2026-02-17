@@ -26,7 +26,7 @@ class SearchApiService {
   }) async {
     try {
       final response = await _dio.get(
-        'api/v1/conversations/search',
+        '/conversations/search',
         queryParameters: {
           'q': query,
           'limit': limit,

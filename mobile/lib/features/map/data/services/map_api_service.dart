@@ -23,7 +23,7 @@ class MapApiService {
   Future<List<MapConversation>> getMapConversations(String date) async {
     try {
       final response = await _dio.get(
-        'api/v1/conversations/map',
+        '/conversations/map',
         queryParameters: {'date': date},
       );
       final list = response.data as List<dynamic>;

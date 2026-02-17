@@ -66,93 +66,119 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Spacer(flex: 3),
-
-                // App wordmark logo
-                Center(
-                  child: Image.asset(
-                    'assets/Wordmark - No BG.png',
-                    height: 320,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Login heading
-                Text(
-                  'Login',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.backgroundDark,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-
-                // Phone input with pill shape
-                PhoneFormField(
-                  controller: _phoneController,
-                  style: const TextStyle(color: AppColors.backgroundDark),
-                  countryButtonStyle: const CountryButtonStyle(
-                    textStyle: TextStyle(color: AppColors.backgroundDark),
-                    dropdownIconColor: AppColors.backgroundDark,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Phone Number',
-                    labelStyle: const TextStyle(color: AppColors.backgroundDark),
-                    filled: true,
-                    fillColor: AppColors.inputBackground,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(
-                        color: AppColors.accentBlue,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                  countrySelectorNavigator:
-                      const CountrySelectorNavigator.modalBottomSheet(),
-                  validator: PhoneValidator.compose([
-                    PhoneValidator.required(context),
-                    PhoneValidator.validMobile(context),
-                  ]),
-                  enabled: !isLoading,
-                ),
-                const SizedBox(height: 24),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Spacer(flex: 3),
 
-                FilledButton(
-                  onPressed: isLoading ? null : _onContinue,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.backgroundDark,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                          // Logo and heading grouped as one unit
+                          Stack(
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              Image.asset(
+                                'assets/Wordmark - No BG.png',
+                                height: 320,
+                                fit: BoxFit.contain,
+                              ),
+                              Positioned(
+                                bottom: 50,
+                                left: 0,
+                                right: 0,
+                                child: Text(
+                                  "Let's get started",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.backgroundDark,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Phone input with pill shape
+                          PhoneFormField(
+                            controller: _phoneController,
+                            style: const TextStyle(
+                                color: AppColors.backgroundDark),
+                            countryButtonStyle: const CountryButtonStyle(
+                              textStyle:
+                                  TextStyle(color: AppColors.backgroundDark),
+                              dropdownIconColor: AppColors.backgroundDark,
                             ),
-                          )
-                        : const Text('Continue'),
+                            decoration: InputDecoration(
+                              labelText: 'Phone Number',
+                              labelStyle: const TextStyle(
+                                  color: AppColors.backgroundDark),
+                              filled: true,
+                              fillColor: AppColors.inputBackground,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(
+                                  color: AppColors.accentBlue,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            countrySelectorNavigator:
+                                const CountrySelectorNavigator
+                                    .modalBottomSheet(),
+                            validator: PhoneValidator.compose([
+                              PhoneValidator.required(context),
+                              PhoneValidator.validMobile(context),
+                            ]),
+                            enabled: !isLoading,
+                          ),
+                          const SizedBox(height: 24),
+
+                          FilledButton(
+                            onPressed: isLoading ? null : _onContinue,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.backgroundDark,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Continue'),
+                            ),
+                          ),
+                          const Spacer(flex: 3),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const Spacer(flex: 4),
-              ],
+                );
+              },
             ),
           ),
         ),
