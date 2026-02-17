@@ -111,6 +111,9 @@ class BleManager {
   bool _isInitialized = false;
   String _currentUserId = '';
 
+  /// Cached Bluetooth adapter state, updated by _onAdapterStateChanged.
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
+
   /// Set of blocked user IDs. Proximity events from these users are
   /// filtered out before reaching the state machine.
   Set<String> _blockedUserIds = {};
@@ -121,6 +124,12 @@ class BleManager {
 
   /// Map of device ID to user ID from successful exchanges.
   final Map<String, String> _deviceToUserIdMap = {};
+
+  /// Cooldown tracker: last GATT exchange attempt time per device.
+  final Map<String, DateTime> _lastExchangeAttempt = {};
+
+  /// Set of device IDs already logged this scan cycle (avoids log flooding).
+  final Set<String> _discoveryLoggedThisCycle = {};
 
   // ---------------------------------------------------------------------------
   // Public Getters
@@ -151,12 +160,29 @@ class BleManager {
   /// Whether the BLE manager has been initialized.
   bool get isInitialized => _isInitialized;
 
+  /// Current Bluetooth adapter state (updated via adapter state listener).
+  BluetoothAdapterState get adapterState => _adapterState;
+
   /// The current user ID being used for GATT exchange.
   String get currentUserId => _currentUserId;
 
   /// Map of device ID to exchanged user ID (for debug display).
   Map<String, String> get deviceToUserIdMap =>
       Map.unmodifiable(_deviceToUserIdMap);
+
+  /// Number of devices that have completed GATT exchange this session.
+  int get exchangedDeviceCount => _exchangedDeviceIds.length;
+
+  /// Whether a device has completed GATT exchange.
+  bool isDeviceExchanged(String deviceId) =>
+      _exchangedDeviceIds.contains(deviceId);
+
+  /// Clear exchanged device tracking (for debug/testing).
+  void clearExchangedDevices() {
+    _exchangedDeviceIds.clear();
+    _deviceToUserIdMap.clear();
+    _log('Exchanged devices cleared');
+  }
 
   /// iOS background handler (null on non-iOS).
   IosBackgroundBle? get iosBackgroundBle => _iosBackgroundBle;
@@ -238,19 +264,29 @@ class BleManager {
         Permission.bluetoothAdvertise,
         Permission.locationWhenInUse,
       ]);
-    } else if (Platform.isIOS) {
-      permissions.add(Permission.bluetooth);
     }
 
-    if (permissions.isEmpty) {
-      return const BlePermissionResult(allGranted: true);
+    // On iOS, Bluetooth authorization is handled via Info.plist declarations
+    // and Core Bluetooth internally -- there is no runtime permission dialog.
+    // permission_handler falsely reports it as permanentlyDenied.
+    // Instead, check the actual adapter state. We only flag it as denied when
+    // the adapter is explicitly off or unauthorized -- 'unknown' just means
+    // Core Bluetooth hasn't finished initializing yet.
+    if (Platform.isIOS) {
+      final adapterState = FlutterBluePlus.adapterStateNow;
+      if (adapterState == BluetoothAdapterState.off ||
+          adapterState == BluetoothAdapterState.unauthorized) {
+        denied.add('Bluetooth (adapter ${adapterState.name})');
+      }
     }
 
-    final statuses = await permissions.request();
+    if (permissions.isNotEmpty) {
+      final statuses = await permissions.request();
 
-    for (final entry in statuses.entries) {
-      if (!entry.value.isGranted) {
-        denied.add(entry.key.toString());
+      for (final entry in statuses.entries) {
+        if (!entry.value.isGranted) {
+          denied.add(entry.key.toString());
+        }
       }
     }
 
@@ -308,6 +344,26 @@ class BleManager {
 
     // Initialize Peripheral GATT server before advertising
     await _peripheralService.initialize();
+
+    // Wait for Bluetooth adapter to be powered on before starting peripheral.
+    // On iOS, CBPeripheralManager needs poweredOn state before addService/
+    // startAdvertising -- calling too early causes "API MISUSE" and timeouts.
+    try {
+      final currentState = FlutterBluePlus.adapterStateNow;
+      if (currentState != BluetoothAdapterState.on) {
+        _log('Waiting for Bluetooth adapter to power on (current: $currentState)...');
+        await FlutterBluePlus.adapterState
+            .firstWhere((s) => s == BluetoothAdapterState.on)
+            .timeout(const Duration(seconds: 10));
+        _log('Bluetooth adapter powered on');
+      }
+    } on TimeoutException {
+      _log('Bluetooth adapter power-on timed out -- skipping peripheral advertising');
+      // Still start scanning even if advertising can't start
+      await _startScanCycle();
+      _log('BLE started: scanning only (advertising skipped)');
+      return;
+    }
 
     // Start both roles concurrently
     await Future.wait([
@@ -369,9 +425,14 @@ class BleManager {
   Future<void> _performScan() async {
     if (!_isRunning) return;
 
+    _discoveryLoggedThisCycle.clear();
+
     try {
-      _log('Scan started');
-      await _centralService.startScanning();
+      final scanMode = Platform.isAndroid
+          ? _androidBackgroundBle?.getRecommendedScanMode()
+          : null;
+      _log('Scan started${scanMode != null ? ' (mode: $scanMode)' : ''}');
+      await _centralService.startScanning(scanMode: scanMode);
       _log('Scan completed');
     } catch (e) {
       _log('Scan error: $e');
@@ -452,8 +513,11 @@ class BleManager {
       return;
     }
 
-    // Feed RSSI into the proximity state machine
-    _stateMachine.onPeerDiscovered(event.deviceId, event.rssi);
+    // Feed RSSI into the proximity state machine.
+    // Resolve deviceId to userId if known, so RSSI updates target the
+    // correct peer entry after a GATT exchange has completed.
+    final resolvedPeerId = _deviceToUserIdMap[event.deviceId] ?? event.deviceId;
+    _stateMachine.onPeerDiscovered(resolvedPeerId, event.rssi);
 
     // Emit raw proximity event
     _proximityController.add(BleProximityEvent(
@@ -464,7 +528,11 @@ class BleManager {
       isExchanged: false,
     ));
 
-    _log('Peer discovered: ${_truncateId(event.deviceId)} RSSI: ${event.rssi}');
+    // Log first discovery per device per scan cycle (avoids flooding)
+    if (!_discoveryLoggedThisCycle.contains(event.deviceId)) {
+      _discoveryLoggedThisCycle.add(event.deviceId);
+      _log('Peer discovered: ${_truncateId(event.deviceId)} RSSI: ${event.rssi}');
+    }
 
     // Attempt GATT exchange for new peers
     if (!_exchangedDeviceIds.contains(event.deviceId)) {
@@ -476,6 +544,10 @@ class BleManager {
   void _onExchange(BleExchangeResult result) {
     _exchangedDeviceIds.add(result.deviceId);
     _deviceToUserIdMap[result.deviceId] = result.peerUserId;
+
+    // Remap the peer in the state machine from deviceId to real userId
+    // so future events (especially "lost") emit the resolved identity.
+    _stateMachine.updatePeerId(result.deviceId, result.peerUserId);
 
     // Filter blocked users before emitting proximity events
     if (_blockedUserIds.contains(result.peerUserId)) {
@@ -526,16 +598,32 @@ class BleManager {
   Future<void> _attemptGattExchange(String deviceId, int rssi) async {
     if (_exchangedDeviceIds.contains(deviceId)) return;
 
-    // Mark as attempted to prevent duplicate attempts
+    // Cooldown: don't retry a device more than once every 30 seconds
+    final lastAttempt = _lastExchangeAttempt[deviceId];
+    if (lastAttempt != null &&
+        DateTime.now().difference(lastAttempt).inSeconds < 30) {
+      return; // Cooldown -- wait before retrying
+    }
+    _lastExchangeAttempt[deviceId] = DateTime.now();
+
+    // Mark as in-progress (prevent concurrent attempts for same device)
     _exchangedDeviceIds.add(deviceId);
 
     try {
       final device = BluetoothDevice.fromId(deviceId);
-      await _centralService.exchangeUserIds(
+      final result = await _centralService.exchangeUserIds(
         device,
         _currentUserId,
         rssi: rssi,
       );
+
+      if (result == null) {
+        // Exchange returned null (service/characteristic not found, empty peer ID).
+        // Remove from exchanged set so it can be retried on next discovery.
+        _exchangedDeviceIds.remove(deviceId);
+        _log('GATT exchange returned null for ${_truncateId(deviceId)} -- will retry');
+      }
+      // On success, _onExchange fires via exchangeStream (device stays in set)
     } catch (e) {
       // Exchange failed -- remove from exchanged set so it can be retried
       // on next discovery. This handles transient connection failures.
@@ -546,6 +634,7 @@ class BleManager {
 
   /// Handle Bluetooth adapter state changes.
   void _onAdapterStateChanged(BluetoothAdapterState state) {
+    _adapterState = state;
     _log('Bluetooth adapter state: $state');
 
     if (state == BluetoothAdapterState.on && _isRunning) {

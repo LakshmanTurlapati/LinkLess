@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:linkless/ble/rssi_filter.dart';
 
 /// Proximity states for a tracked peer.
@@ -41,7 +42,7 @@ class ProximityEvent {
 
 /// Internal tracking state for a single peer.
 class _PeerState {
-  final String peerId;
+  String peerId;
   final RssiFilter rssiFilter;
   ProximityState state = ProximityState.idle;
   Timer? debounceTimer;
@@ -101,6 +102,14 @@ class ProximityStateMachine {
     return _peers[peerId]?.state ?? ProximityState.idle;
   }
 
+  /// Get the filtered (EMA) RSSI for a peer, or null if unknown.
+  double? getFilteredRssi(String peerId) {
+    return _peers[peerId]?.rssiFilter.currentRssi;
+  }
+
+  /// Number of tracked peers.
+  int get peerCount => _peers.length;
+
   /// Called when a BLE scan discovers a peer with an RSSI reading.
   ///
   /// Updates the RSSI filter and evaluates state transitions.
@@ -126,6 +135,19 @@ class ProximityStateMachine {
 
     if (peer.state == ProximityState.detected) {
       _startDebounce(peer);
+    }
+  }
+
+  /// Remap a tracked peer from [oldPeerId] to [newPeerId].
+  ///
+  /// Used when a GATT exchange resolves a device ID to a real user ID.
+  /// Transfers all state (RSSI filter, debounce timer, proximity state)
+  /// so subsequent events use the resolved identity.
+  void updatePeerId(String oldPeerId, String newPeerId) {
+    final peer = _peers.remove(oldPeerId);
+    if (peer != null) {
+      peer.peerId = newPeerId;
+      _peers[newPeerId] = peer;
     }
   }
 
@@ -156,6 +178,12 @@ class ProximityStateMachine {
           peer.state = ProximityState.detected;
           _cancelDebounce(peer);
           _emitEvent(peer.peerId, ProximityEventType.detected);
+        } else if (filteredRssi >= enterThreshold - 15) {
+          // Near but not crossing threshold -- log for diagnostics
+          debugPrint(
+            '[ProximityStateMachine] Peer ${peer.peerId.length > 8 ? peer.peerId.substring(0, 8) : peer.peerId}... '
+            'RSSI ${filteredRssi.toStringAsFixed(1)} below enter threshold $enterThreshold',
+          );
         }
         break;
 

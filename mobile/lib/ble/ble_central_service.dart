@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'package:linkless/ble/ble_constants.dart';
@@ -98,7 +100,7 @@ class BleCentralService {
   /// discover Linkless peers. Scan results are emitted on [discoveryStream].
   /// The scan runs for [BleConstants.scanTimeout] before automatically
   /// stopping.
-  Future<void> startScanning() async {
+  Future<void> startScanning({AndroidScanMode? scanMode}) async {
     if (_isScanning) return;
 
     _isScanning = true;
@@ -106,7 +108,29 @@ class BleCentralService {
     // Listen to scan results and emit discovery events
     _scanSubscription = FlutterBluePlus.onScanResults.listen(
       (results) {
+        // Android scan diagnostics: log when many results arrive but none match
+        if (Platform.isAndroid && results.isNotEmpty) {
+          final withService = results.where((r) =>
+            r.advertisementData.serviceUuids.any((u) => u == BleConstants.serviceUuid)
+          ).length;
+          if (withService == 0 && results.length > 3) {
+            debugPrint(
+              '[BleCentralService] Android scan: ${results.length} results, '
+              '0 matched Linkless UUID',
+            );
+          }
+        }
+
         for (final result in results) {
+          // On Android (unfiltered scan), manually check service UUIDs
+          // because iOS ble_peripheral ads may not include the UUID in
+          // a format that Android's hardware filter can match.
+          if (Platform.isAndroid) {
+            final hasService = result.advertisementData.serviceUuids
+                .any((uuid) => uuid == BleConstants.serviceUuid);
+            if (!hasService) continue;
+          }
+
           final event = BleDiscoveryEvent(
             deviceId: result.device.remoteId.str,
             rssi: result.rssi,
@@ -125,12 +149,31 @@ class BleCentralService {
     FlutterBluePlus.cancelWhenScanComplete(_scanSubscription!);
 
     try {
+      // On Android, scan without service filter because iOS ble_peripheral
+      // advertisements may not include the UUID in a format Android's
+      // hardware filter matches. We filter manually in the results listener.
+      // On iOS, keep the filter as it works correctly.
       await FlutterBluePlus.startScan(
-        withServices: [BleConstants.serviceUuid],
+        withServices: Platform.isIOS ? [BleConstants.serviceUuid] : [],
         timeout: BleConstants.scanTimeout,
         continuousUpdates: true,
         continuousDivisor: 3,
+        androidScanMode: scanMode ?? AndroidScanMode.lowLatency,
       );
+
+      // startScan may resolve before the scan actually finishes on Android.
+      // Wait for the scan to truly complete so the scan cycle doesn't
+      // restart prematurely and hit Android's "scanning too frequently"
+      // throttle.
+      if (FlutterBluePlus.isScanningNow) {
+        await FlutterBluePlus.isScanning
+            .where((scanning) => !scanning)
+            .first
+            .timeout(
+              BleConstants.scanTimeout + const Duration(seconds: 5),
+              onTimeout: () => false,
+            );
+      }
     } catch (e) {
       _isScanning = false;
       rethrow;
@@ -166,17 +209,26 @@ class BleCentralService {
   }) async {
     try {
       // Connect with timeout
+      debugPrint('[BleCentralService] Exchange: connecting to ${device.remoteId.str}...');
       await device.connect(
         license: License.free,
         timeout: BleConstants.connectionTimeout,
         mtu: null,
         autoConnect: false,
       );
+      debugPrint('[BleCentralService] Exchange: connected, discovering services...');
+
+      // Request larger MTU for UUID exchange (36 bytes + 3 ATT overhead = 39 minimum)
+      if (Platform.isAndroid) {
+        await device.requestMtu(64);
+      }
 
       // Discover services
       final services = await device.discoverServices(
+        subscribeToServicesChanged: false,
         timeout: BleConstants.serviceDiscoveryTimeoutSeconds,
       );
+      debugPrint('[BleCentralService] Exchange: found ${services.length} services');
 
       // Find the Linkless service
       BluetoothService? linklessService;
@@ -188,6 +240,7 @@ class BleCentralService {
       }
 
       if (linklessService == null) {
+        debugPrint('[BleCentralService] Exchange: Linkless service NOT found on ${device.remoteId.str}');
         await device.disconnect();
         return null;
       }
@@ -202,6 +255,7 @@ class BleCentralService {
       }
 
       if (userIdCharacteristic == null) {
+        debugPrint('[BleCentralService] Exchange: userId characteristic NOT found');
         await device.disconnect();
         return null;
       }
@@ -211,6 +265,7 @@ class BleCentralService {
       final peerUserId = utf8.decode(peerIdBytes);
 
       if (peerUserId.isEmpty) {
+        debugPrint('[BleCentralService] Exchange: peer userId is EMPTY');
         await device.disconnect();
         return null;
       }
@@ -221,6 +276,8 @@ class BleCentralService {
 
       // Disconnect
       await device.disconnect();
+
+      debugPrint('[BleCentralService] Exchange SUCCESS: peer=${peerUserId.substring(0, 8)}...');
 
       final result = BleExchangeResult(
         peerUserId: peerUserId,
