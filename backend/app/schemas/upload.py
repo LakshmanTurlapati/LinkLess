@@ -13,7 +13,7 @@ class PresignRequest(BaseModel):
         max_length=1024,
     )
     content_type: str = Field(
-        default="audio/aac",
+        default="audio/mp4",
         description="MIME type of the file being uploaded",
     )
     expires_in: int = Field(

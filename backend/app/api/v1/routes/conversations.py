@@ -59,7 +59,7 @@ async def create_conversation(
         storage = StorageService()
         upload_url = storage.generate_upload_url(
             key=conversation.audio_storage_key,
-            content_type="audio/aac",
+            content_type="audio/mp4",
             expires_in=3600,
         )
         download_url = storage.generate_download_url(

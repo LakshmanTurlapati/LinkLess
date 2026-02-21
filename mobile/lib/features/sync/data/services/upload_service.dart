@@ -66,7 +66,7 @@ class UploadService {
       options: Options(
         headers: {
           Headers.contentLengthHeader: fileBytes.length,
-          Headers.contentTypeHeader: 'audio/aac',
+          Headers.contentTypeHeader: 'audio/mp4',
         },
       ),
     );

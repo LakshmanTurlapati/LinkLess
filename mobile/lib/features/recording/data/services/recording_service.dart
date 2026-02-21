@@ -43,12 +43,13 @@ class RecordingService with WidgetsBindingObserver {
   final Dio _dio;
   final PeerInitialsResolver? _peerInitialsResolver;
 
-  static const _maxRecordingDuration = Duration(minutes: 3);
+  static const _maxRecordingDuration = Duration(minutes: 5);
   static const _identityChainTimeout = Duration(seconds: 15);
 
   StreamSubscription<ProximityEvent>? _proximitySubscription;
   StreamSubscription<BleProximityEvent>? _exchangeSubscription;
   Timer? _maxDurationTimer;
+  Timer? _remotePeerScanTimeout;
   String? _activeConversationId;
   String? _activePeerId;
   String? _originalDeviceId;
@@ -171,6 +172,13 @@ class RecordingService with WidgetsBindingObserver {
     if (!event.isExchanged) return;
     if (event.peerId.isEmpty) return;
     if (_activeConversationId == null && _state != RecordingState.pending) {
+      // Remote-initiated recording: peer wrote their user ID to our GATT
+      // characteristic while we are IDLE. Start recording immediately
+      // (skip GATT resolution since we already have the user ID).
+      if (_state == RecordingState.idle && _isInForeground) {
+        _startRemoteInitiatedRecording(event.peerId);
+        return;
+      }
       debugPrint(
         '[RecordingService] Exchange event ignored: no active conversation '
         'and not pending (peerId=${event.peerId}, deviceId=${event.deviceId})',
@@ -249,6 +257,14 @@ class RecordingService with WidgetsBindingObserver {
   /// kicks off the identity resolution chain (GATT exchange + profile fetch).
   /// Recording only starts if the entire chain succeeds.
   Future<void> _onPeerDetected(String peerId) async {
+    // If recording was started via remote peripheral path and our own scan
+    // now confirms the peer, cancel the safety timeout.
+    if (_state != RecordingState.idle && _activePeerId == peerId) {
+      _remotePeerScanTimeout?.cancel();
+      _remotePeerScanTimeout = null;
+      return;
+    }
+
     // Guard: already in a non-idle state (pending or recording)
     if (_state != RecordingState.idle) return;
 
@@ -301,6 +317,80 @@ class RecordingService with WidgetsBindingObserver {
           BleManager.instance.resetPeerTracking(resetDeviceId);
         }
       });
+    }
+  }
+
+  /// Starts recording triggered by a remote peripheral write (the other device
+  /// wrote its user ID to our GATT characteristic while we were IDLE).
+  ///
+  /// Skips GATT resolution entirely since the user ID is already known from
+  /// the write. Only fetches the peer profile, then starts recording.
+  ///
+  /// A 60-second safety timer ensures we stop recording if our own scan never
+  /// confirms the peer (e.g., peer walked away immediately after the write).
+  Future<void> _startRemoteInitiatedRecording(String userId) async {
+    // Re-check guards (Dart is single-threaded, but be defensive)
+    if (_state != RecordingState.idle || !_isInForeground) return;
+
+    _activePeerId = userId;
+    _peerIdResolved = true;
+    _originalDeviceId = null;
+
+    if (!_peerIdController.isClosed) {
+      _peerIdController.add(userId);
+    }
+
+    // Enter pending state -- overlay shows shimmer
+    _setState(RecordingState.pending);
+    _identityChainCompleter = Completer<void>();
+
+    debugPrint(
+      '[RecordingService] Remote-initiated recording for peer: $userId',
+    );
+
+    try {
+      // Fetch peer profile (reuse existing method with cancellation support)
+      final profile = await Future.any([
+        _fetchPeerProfile(userId),
+        _identityChainCompleter!.future.then((_) {
+          throw StateError('Peer lost during remote-initiated profile fetch');
+        }),
+      ]).timeout(_identityChainTimeout, onTimeout: () {
+        throw TimeoutException(
+          'Remote-initiated profile fetch timed out after '
+          '${_identityChainTimeout.inSeconds}s',
+        );
+      });
+
+      // Check if cancelled during fetch
+      if (_identityChainCompleter?.isCompleted == true) {
+        throw StateError('Peer lost after remote-initiated profile fetch');
+      }
+
+      _activePeerProfile = profile;
+      if (!_peerProfileController.isClosed) {
+        _peerProfileController.add(profile);
+      }
+
+      await _startGatedRecording(userId, profile);
+
+      // Start safety timer: if our scan doesn't confirm the peer within 60s,
+      // stop recording (peer probably left before our scan found them).
+      _remotePeerScanTimeout = Timer(const Duration(seconds: 60), () {
+        debugPrint(
+          '[RecordingService] Remote peer scan timeout (60s) -- '
+          'scan never confirmed peer $userId, stopping recording',
+        );
+        _onPeerLost(userId);
+      });
+    } catch (e) {
+      debugPrint(
+        '[RecordingService] Remote-initiated recording failed for $userId: '
+        '$e -- returning to idle',
+      );
+
+      _clearActiveState();
+      _setState(RecordingState.idle);
     }
   }
 
@@ -541,9 +631,9 @@ class RecordingService with WidgetsBindingObserver {
       // Start recording FIRST -- do not wait for GPS
       await _audioEngine.startRecording(conversationId);
 
-      // Hard stop after 3 minutes
+      // Hard stop after 5 minutes
       _maxDurationTimer = Timer(_maxRecordingDuration, () {
-        debugPrint('[RecordingService] Max duration reached (3 min) -- stopping');
+        debugPrint('[RecordingService] Max duration reached (5 min) -- stopping');
         _onPeerLost(userId);
       });
 
@@ -702,6 +792,8 @@ class RecordingService with WidgetsBindingObserver {
   void _clearActiveState() {
     _maxDurationTimer?.cancel();
     _maxDurationTimer = null;
+    _remotePeerScanTimeout?.cancel();
+    _remotePeerScanTimeout = null;
     _activeConversationId = null;
     _activePeerId = null;
     _peerIdResolved = false;

@@ -41,7 +41,7 @@ class StorageService:
     def generate_upload_url(
         self,
         key: str,
-        content_type: str = "audio/aac",
+        content_type: str = "audio/mp4",
         expires_in: int = 3600,
     ) -> str:
         """Generate a presigned URL for uploading an object.

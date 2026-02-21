@@ -42,7 +42,7 @@ class ConversationService:
             The newly created Conversation.
         """
         conversation_id = uuid_mod.uuid4()
-        audio_key = f"conversations/{data.user_id}/{conversation_id}.aac"
+        audio_key = f"conversations/{data.user_id}/{conversation_id}.m4a"
 
         location = None
         if data.latitude is not None and data.longitude is not None:
