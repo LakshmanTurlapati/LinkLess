@@ -6,6 +6,10 @@ enum RecordingState {
   /// No recording in progress. Ready to start.
   idle,
 
+  /// Proximity detected, waiting for identity chain (GATT exchange + profile
+  /// fetch) to complete before recording starts. Overlay shows shimmer.
+  pending,
+
   /// Actively recording audio to file.
   recording,
 
