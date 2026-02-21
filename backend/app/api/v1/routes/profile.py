@@ -178,6 +178,10 @@ async def get_peer_profile(
     """Get another user's public profile by their ID."""
     profile = await _profile_service.get_profile(user_id, db)
     if profile is None:
+        logger.warning(
+            "Peer profile not found: user_id=%s, requested_by=%s",
+            user_id, user.id,
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found",
