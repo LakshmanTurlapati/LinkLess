@@ -1,7 +1,7 @@
 """LLM-based conversation summarization service.
 
-Generates a concise summary, key topics, and predicted speaker count from a
-conversation transcript using xAI Grok 4-1-fast via the OpenAI-compatible API.
+Generates a casual friend-recap summary and topic labels from a conversation
+transcript using xAI Grok via the OpenAI-compatible API.
 """
 
 import json
@@ -13,14 +13,15 @@ from openai import AsyncOpenAI
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
-    "You are a conversation analyzer. Given a raw transcript of a conversation "
-    "between two or more people, do the following:\n"
-    "1. Predict which parts were spoken by different speakers based on "
-    "conversational context, topic shifts, and dialogue patterns.\n"
-    "2. Produce a JSON object with exactly three fields:\n"
-    '- "summary": A 2-3 sentence summary of the conversation.\n'
-    '- "key_topics": A list of 3-5 short strings representing the main topics.\n'
-    '- "speaker_count": The predicted number of distinct speakers (integer).\n'
+    "You summarize conversations like a friend giving a casual recap. "
+    "Given a transcript of a conversation between two people, produce a JSON "
+    "object with exactly two fields:\n"
+    '- "summary": A brief, casual recap of what was discussed (1-2 sentences, '
+    "like you're telling a friend what they talked about). Example tone: "
+    "'You talked about weekend plans and the new project.'\n"
+    '- "topics": A list of up to 3 short, free-form topic labels that would '
+    "help someone find this conversation later (e.g., 'weekend plans', "
+    "'CS 101 homework', 'job interview prep').\n"
     "Respond ONLY with valid JSON. No extra text."
 )
 
@@ -33,20 +34,18 @@ class SummaryResult:
     """Result of a summarization operation.
 
     Attributes:
-        summary: A 2-3 sentence summary of the conversation.
-        key_topics: List of 3-5 key topic strings.
-        speaker_count: Predicted number of distinct speakers.
+        summary: A brief casual recap of the conversation.
+        key_topics: List of up to 3 topic label strings.
         provider: Which LLM provider produced this result.
     """
 
     summary: str = ""
     key_topics: list[str] = field(default_factory=list)
-    speaker_count: int = 0
     provider: str = ""
 
 
 class SummarizationService:
-    """Generates conversation summaries using xAI Grok 4-1-fast.
+    """Generates conversation summaries using xAI Grok.
 
     Usage:
         service = SummarizationService(xai_api_key)
@@ -66,7 +65,7 @@ class SummarizationService:
             transcript_text: Plain text transcript of the conversation.
 
         Returns:
-            SummaryResult with summary text, key topics, and speaker count.
+            SummaryResult with summary text and key topics.
         """
         # Handle empty or very short transcripts
         if not transcript_text or len(transcript_text.split()) < _MIN_WORD_COUNT:
@@ -77,7 +76,6 @@ class SummarizationService:
             return SummaryResult(
                 summary="Brief or empty conversation",
                 key_topics=[],
-                speaker_count=0,
                 provider="grok",
             )
 
@@ -87,7 +85,7 @@ class SummarizationService:
         )
 
         response = await client.chat.completions.create(
-            model="grok-4-1-fast",
+            model="grok-4-1-fast-non-reasoning",
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": f"Transcript:\n{transcript_text}"},
@@ -108,13 +106,11 @@ class SummarizationService:
             return SummaryResult(
                 summary="Summary generation failed",
                 key_topics=[],
-                speaker_count=0,
                 provider="grok",
             )
 
         summary_text = parsed.get("summary", "")
-        key_topics = parsed.get("key_topics", [])
-        speaker_count = parsed.get("speaker_count", 0)
+        key_topics = parsed.get("topics", [])
 
         # Validate types
         if not isinstance(summary_text, str):
@@ -122,22 +118,16 @@ class SummarizationService:
         if not isinstance(key_topics, list):
             key_topics = []
         key_topics = [str(t) for t in key_topics if t]
-        if not isinstance(speaker_count, int):
-            try:
-                speaker_count = int(speaker_count)
-            except (ValueError, TypeError):
-                speaker_count = 0
+        key_topics = key_topics[:3]
 
         logger.info(
-            "Summarization complete: %d chars summary, %d topics, %d speakers",
+            "Summarization complete: %d chars summary, %d topics",
             len(summary_text),
             len(key_topics),
-            speaker_count,
         )
 
         return SummaryResult(
             summary=summary_text,
             key_topics=key_topics,
-            speaker_count=speaker_count,
             provider="grok",
         )
