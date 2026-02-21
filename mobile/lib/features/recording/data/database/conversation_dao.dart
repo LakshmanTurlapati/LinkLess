@@ -99,6 +99,27 @@ class ConversationDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Clean up conversations left incomplete by app crash or force-close.
+  ///
+  /// Finds conversations where endedAt is null (recording was active when
+  /// app died), sets endedAt to startedAt (zero duration), and clears
+  /// syncStatus to 'failed' so they are not uploaded with corrupt audio.
+  Future<int> cleanupIncompleteConversations() async {
+    final incomplete = await (select(conversationEntries)
+          ..where((t) => t.endedAt.isNull()))
+        .get();
+    for (final conv in incomplete) {
+      await (update(conversationEntries)
+            ..where((t) => t.id.equals(conv.id)))
+          .write(ConversationEntriesCompanion(
+        endedAt: Value(conv.startedAt),
+        durationSeconds: const Value(0),
+        syncStatus: const Value('failed'),
+      ));
+    }
+    return incomplete.length;
+  }
+
   /// Update the sync status of a conversation by its ID.
   Future<void> updateSyncStatus(String id, String status) {
     return (update(conversationEntries)..where((t) => t.id.equals(id))).write(

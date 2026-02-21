@@ -650,6 +650,46 @@ class RecordingService with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _isInForeground = state == AppLifecycleState.resumed;
+    if (state == AppLifecycleState.detached) {
+      _stopRecordingOnTermination();
+    }
+  }
+
+  /// Emergency stop when the app is being terminated (detached state).
+  ///
+  /// Best-effort: the process may die before all async operations complete.
+  /// The startup cleanup (Fix 3) handles any incomplete conversations.
+  void _stopRecordingOnTermination() {
+    if (_state == RecordingState.idle) return;
+
+    debugPrint(
+      '[RecordingService] App detached during ${_state.name} '
+      '-- emergency stop',
+    );
+
+    if (_state == RecordingState.recording) {
+      // Best-effort: try to finalize audio and DB record
+      final conversationId = _activeConversationId;
+      final startTime = _recordingStartTime;
+      _audioEngine.stopRecording().then((filePath) {
+        if (conversationId != null) {
+          final endedAt = DateTime.now();
+          final durationSeconds = startTime != null
+              ? endedAt.difference(startTime).inSeconds
+              : 0;
+          _conversationDao.completeConversation(
+            conversationId,
+            audioFilePath: filePath ?? '',
+            endedAt: endedAt,
+            durationSeconds: durationSeconds,
+          );
+        }
+      }).catchError((_) {});
+      NotificationService.instance.dismissRecordingNotification();
+    }
+
+    _clearActiveState();
+    _setState(RecordingState.idle);
   }
 
   void _setState(RecordingState newState) {

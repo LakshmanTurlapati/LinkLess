@@ -10,6 +10,7 @@ import 'package:linkless/features/auth/presentation/providers/auth_provider.dart
 import 'package:linkless/features/proximity/services/proximity_notification_handler.dart';
 import 'package:linkless/features/connections/presentation/providers/block_provider.dart';
 import 'package:linkless/features/profile/presentation/view_models/profile_view_model.dart';
+import 'package:linkless/features/recording/presentation/providers/database_provider.dart';
 
 // ---------------------------------------------------------------------------
 // App initialization provider
@@ -81,6 +82,19 @@ Future<void> _initializeServices(Ref ref) async {
     // Step 1b: Initialize notification service + request notification permission.
     await NotificationService.instance.initialize();
     await Permission.notification.request();
+
+    // Step 1c: Clean up incomplete conversations from previous crash/force-close.
+    try {
+      final dao = ref.read(conversationDaoProvider);
+      final cleaned = await dao.cleanupIncompleteConversations();
+      if (cleaned > 0) {
+        debugPrint('[AppInit] Cleaned up $cleaned incomplete conversation(s)');
+      }
+      // Dismiss any stale recording notification from previous session
+      await NotificationService.instance.dismissRecordingNotification();
+    } catch (e) {
+      debugPrint('[AppInit] Conversation cleanup failed (non-fatal): $e');
+    }
 
     // If already marked as new user, skip initialization -- router will
     // redirect to profile creation. Avoids redundant API calls.
