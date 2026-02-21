@@ -24,6 +24,10 @@ mobile/lib/core/config/app_config.dart
 *.swo
 *~
 
+# Debug / runtime
+logs/
+backend/app.db
+
 # OS
 .DS_Store
 Thumbs.db
