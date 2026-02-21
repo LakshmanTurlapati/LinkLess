@@ -27,13 +27,14 @@ class BleConstants {
       'f2688f1c-0fbd-47aa-a048-df36c8325b67';
 
   /// RSSI threshold to consider a device as "entering" proximity range.
-  /// Higher (less negative) = closer. -70 dBm is roughly 1-3 meters.
-  static const int enterRssiThreshold = -70;
+  /// Higher (less negative) = closer. -45 dBm targets ~2 feet / 0.6 meters.
+  /// Testing value -- will fine-tune after physical test.
+  static const int enterRssiThreshold = -45;
 
   /// RSSI threshold to consider a device as "exiting" proximity range.
-  /// Lower (more negative) = farther away. -80 dBm provides 10 dBm
+  /// Lower (more negative) = farther away. -55 dBm provides 10 dBm
   /// hysteresis gap to prevent rapid enter/exit oscillation.
-  static const int exitRssiThreshold = -80;
+  static const int exitRssiThreshold = -55;
 
   /// Debounce timeout before a device is considered truly exited.
   /// Prevents false exits from momentary signal drops.

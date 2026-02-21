@@ -87,8 +87,8 @@ class ProximityStateMachine {
   bool _disposed = false;
 
   ProximityStateMachine({
-    this.enterThreshold = -70,
-    this.exitThreshold = -80,
+    this.enterThreshold = -57,
+    this.exitThreshold = -67,
     this.debounceDuration = const Duration(seconds: 10),
     this.rssiAlpha = 0.3,
   });
