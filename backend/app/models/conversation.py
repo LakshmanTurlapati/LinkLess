@@ -39,6 +39,7 @@ class Conversation(Base, TimestampMixin):
         String(512), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), default="pending")
+    error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Conversation id={self.id} status={self.status}>"

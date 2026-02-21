@@ -66,3 +66,4 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     max_jobs = 5
     job_timeout = 600  # 10 minutes
+    max_tries = 2  # 1 retry = 2 total attempts
