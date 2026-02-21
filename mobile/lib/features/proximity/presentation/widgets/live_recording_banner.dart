@@ -1,7 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
+import 'package:linkless/features/profile/domain/models/user_profile.dart';
+import 'package:linkless/features/proximity/presentation/widgets/shimmer_avatar.dart';
+import 'package:linkless/features/recording/domain/models/recording_state.dart';
 import 'package:linkless/features/recording/presentation/providers/live_recording_provider.dart';
 import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 import 'package:linkless/features/proximity/presentation/widgets/elapsed_timer_text.dart';
@@ -9,18 +13,24 @@ import 'package:linkless/features/proximity/presentation/widgets/pulsing_recordi
 
 /// Compact recording banner displayed at the top of the screen.
 ///
-/// Shows the peer's initials, a pulsing red dot, "Recording" text, and an
-/// elapsed timer. Tapping the banner re-opens the full-screen overlay.
+/// During the pending state (identity chain resolving), displays a pulsing
+/// [ShimmerAvatar] placeholder. Once the identity chain completes and the
+/// peer profile is resolved, an [AnimatedSwitcher] fades from shimmer to
+/// the resolved profile photo (via [CachedNetworkImage]) or initials.
 ///
-/// During the pending state (identity chain resolving), the profile is null
-/// and a placeholder '?' is shown. Once the identity chain completes and
-/// recording starts, the resolved profile data is displayed.
+/// Shows the peer avatar, a pulsing red dot, "Recording" text, and an
+/// elapsed timer. Tapping the banner re-opens the full-screen overlay.
 class LiveRecordingBanner extends ConsumerWidget {
   const LiveRecordingBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final stateAsync = ref.watch(recordingStateProvider);
+    final currentState = stateAsync.valueOrNull;
     final profile = ref.watch(activePeerProfileProvider);
+
+    final isLoading =
+        currentState == RecordingState.pending || profile == null;
 
     return SafeArea(
       bottom: false,
@@ -44,26 +54,15 @@ class LiveRecordingBanner extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
-                  // Peer initials avatar
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: AppColors.accentBlue,
-                    backgroundImage: profile?.photoUrl != null
-                        ? NetworkImage(profile!.photoUrl!)
-                        : null,
-                    child: profile?.photoUrl == null
-                        ? Text(
-                            profile?.initials ??
-                                (profile?.displayName != null
-                                    ? profile!.displayName![0].toUpperCase()
-                                    : '?'),
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  // Peer avatar with shimmer/resolved fade
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: isLoading
+                        ? const ShimmerAvatar(
+                            key: ValueKey('shimmer-banner'),
+                            radius: 12,
                           )
-                        : null,
+                        : _buildBannerAvatar(profile),
                   ),
                   const SizedBox(width: 10),
                   const PulsingRecordingDot(size: 8),
@@ -90,6 +89,31 @@ class LiveRecordingBanner extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Builds the resolved peer avatar for the compact banner.
+  ///
+  /// Uses [CachedNetworkImageProvider] for photo display with caching.
+  /// Anonymous peers always have initials and photoUrl from the backend.
+  Widget _buildBannerAvatar(UserProfile? profile) {
+    return CircleAvatar(
+      key: const ValueKey('resolved-banner'),
+      radius: 12,
+      backgroundColor: AppColors.accentBlue,
+      backgroundImage: profile?.photoUrl != null
+          ? CachedNetworkImageProvider(profile!.photoUrl!)
+          : null,
+      child: profile?.photoUrl == null
+          ? Text(
+              profile?.initials ?? '?',
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : null,
     );
   }
 }

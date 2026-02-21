@@ -1,7 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
+import 'package:linkless/features/profile/domain/models/user_profile.dart';
+import 'package:linkless/features/proximity/presentation/widgets/shimmer_avatar.dart';
+import 'package:linkless/features/recording/domain/models/recording_state.dart';
 import 'package:linkless/features/recording/presentation/providers/live_recording_provider.dart';
 import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 import 'package:linkless/features/proximity/presentation/widgets/elapsed_timer_text.dart';
@@ -9,19 +13,24 @@ import 'package:linkless/features/proximity/presentation/widgets/pulsing_recordi
 
 /// Full-screen overlay shown when a proximity-triggered recording is active.
 ///
-/// Displays the peer's profile photo (or initials fallback), a pulsing red
-/// recording dot, and a live elapsed timer. The user can minimize to the
-/// compact banner via the top-right button.
+/// During the pending state (identity chain resolving), displays a pulsing
+/// [ShimmerAvatar] placeholder and "Linking..." text. Once the identity chain
+/// completes and the peer profile is resolved, an [AnimatedSwitcher] fades
+/// from shimmer to the resolved profile photo (via [CachedNetworkImage]) or
+/// initials fallback.
 ///
-/// During the pending state (identity chain resolving), the profile is null
-/// and a placeholder is shown. Once the identity chain completes and
-/// recording starts, the resolved profile data is displayed.
+/// The user can minimize to the compact banner via the top-right button.
 class LiveRecordingOverlay extends ConsumerWidget {
   const LiveRecordingOverlay({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final stateAsync = ref.watch(recordingStateProvider);
+    final currentState = stateAsync.valueOrNull;
     final profile = ref.watch(activePeerProfileProvider);
+
+    final isLoading =
+        currentState == RecordingState.pending || profile == null;
 
     return Material(
       color: AppColors.backgroundDarker,
@@ -46,18 +55,22 @@ class LiveRecordingOverlay extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Profile photo / initials
-                  _buildAvatar(
-                    profile?.photoUrl,
-                    profile?.initials,
-                    profile?.displayName,
+                  // Profile photo / shimmer placeholder
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: isLoading
+                        ? const ShimmerAvatar(
+                            key: ValueKey('shimmer'),
+                            radius: 60,
+                          )
+                        : _buildResolvedAvatar(profile),
                   ),
                   const SizedBox(height: 24),
                   // Display name
                   Text(
-                    profile != null
-                        ? 'Linking with ${profile.initials ?? '...'}'
-                        : 'Linking...',
+                    isLoading
+                        ? 'Linking...'
+                        : 'Linking with ${profile.initials ?? '...'}',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 24,
@@ -99,16 +112,23 @@ class LiveRecordingOverlay extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatar(String? photoUrl, String? initials, String? name) {
-    final fallbackText = initials ?? (name != null ? name[0].toUpperCase() : '?');
-
+  /// Builds the resolved peer avatar with photo or initials fallback.
+  ///
+  /// Uses [CachedNetworkImageProvider] for photo display, which provides
+  /// disk caching and built-in fade-in from CDN. Anonymous peers always
+  /// have initials and photoUrl from the backend, so they display correctly
+  /// without special handling.
+  Widget _buildResolvedAvatar(UserProfile? profile) {
     return CircleAvatar(
+      key: const ValueKey('resolved'),
       radius: 60,
       backgroundColor: AppColors.backgroundCard,
-      backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-      child: photoUrl == null
+      backgroundImage: profile?.photoUrl != null
+          ? CachedNetworkImageProvider(profile!.photoUrl!)
+          : null,
+      child: profile?.photoUrl == null
           ? Text(
-              fallbackText,
+              profile?.initials ?? '?',
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 36,
