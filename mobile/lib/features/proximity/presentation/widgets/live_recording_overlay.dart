@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/recording/presentation/providers/live_recording_provider.dart';
+import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 import 'package:linkless/features/proximity/presentation/widgets/elapsed_timer_text.dart';
 import 'package:linkless/features/proximity/presentation/widgets/pulsing_recording_dot.dart';
 
@@ -11,12 +12,16 @@ import 'package:linkless/features/proximity/presentation/widgets/pulsing_recordi
 /// Displays the peer's profile photo (or initials fallback), a pulsing red
 /// recording dot, and a live elapsed timer. The user can minimize to the
 /// compact banner via the top-right button.
+///
+/// During the pending state (identity chain resolving), the profile is null
+/// and a placeholder is shown. Once the identity chain completes and
+/// recording starts, the resolved profile data is displayed.
 class LiveRecordingOverlay extends ConsumerWidget {
   const LiveRecordingOverlay({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final peerAsync = ref.watch(activePeerProfileProvider);
+    final profile = ref.watch(activePeerProfileProvider);
 
     return Material(
       color: AppColors.backgroundDarker,
@@ -42,40 +47,21 @@ class LiveRecordingOverlay extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Profile photo / initials
-                  peerAsync.when(
-                    data: (profile) => _buildAvatar(profile?.photoUrl,
-                        profile?.initials, profile?.displayName),
-                    loading: () => _buildAvatar(null, null, null),
-                    error: (_, __) => _buildAvatar(null, null, null),
+                  _buildAvatar(
+                    profile?.photoUrl,
+                    profile?.initials,
+                    profile?.displayName,
                   ),
                   const SizedBox(height: 24),
                   // Display name
-                  peerAsync.when(
-                    data: (profile) => Text(
-                      profile != null
-                          ? 'Linking with ${profile.initials ?? '...'}'
-                          : 'Linking...',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    loading: () => const Text(
-                      'Linking...',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    error: (_, __) => const Text(
-                      'Linking...',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Text(
+                    profile != null
+                        ? 'Linking with ${profile.initials ?? '...'}'
+                        : 'Linking...',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 32),

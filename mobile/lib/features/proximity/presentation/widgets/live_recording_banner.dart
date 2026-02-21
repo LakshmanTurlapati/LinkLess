@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/recording/presentation/providers/live_recording_provider.dart';
+import 'package:linkless/features/recording/presentation/providers/recording_provider.dart';
 import 'package:linkless/features/proximity/presentation/widgets/elapsed_timer_text.dart';
 import 'package:linkless/features/proximity/presentation/widgets/pulsing_recording_dot.dart';
 
@@ -10,12 +11,16 @@ import 'package:linkless/features/proximity/presentation/widgets/pulsing_recordi
 ///
 /// Shows the peer's initials, a pulsing red dot, "Recording" text, and an
 /// elapsed timer. Tapping the banner re-opens the full-screen overlay.
+///
+/// During the pending state (identity chain resolving), the profile is null
+/// and a placeholder '?' is shown. Once the identity chain completes and
+/// recording starts, the resolved profile data is displayed.
 class LiveRecordingBanner extends ConsumerWidget {
   const LiveRecordingBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final peerAsync = ref.watch(activePeerProfileProvider);
+    final profile = ref.watch(activePeerProfileProvider);
 
     return SafeArea(
       bottom: false,
@@ -40,41 +45,25 @@ class LiveRecordingBanner extends ConsumerWidget {
               child: Row(
                 children: [
                   // Peer initials avatar
-                  peerAsync.when(
-                    data: (profile) => CircleAvatar(
-                      radius: 12,
-                      backgroundColor: AppColors.accentBlue,
-                      backgroundImage: profile?.photoUrl != null
-                          ? NetworkImage(profile!.photoUrl!)
-                          : null,
-                      child: profile?.photoUrl == null
-                          ? Text(
-                              profile?.initials ??
-                                  (profile?.displayName != null
-                                      ? profile!.displayName![0].toUpperCase()
-                                      : '?'),
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            )
-                          : null,
-                    ),
-                    loading: () => const CircleAvatar(
-                      radius: 12,
-                      backgroundColor: AppColors.accentBlue,
-                      child: Text('?',
-                          style: TextStyle(
-                              color: AppColors.textPrimary, fontSize: 10)),
-                    ),
-                    error: (_, __) => const CircleAvatar(
-                      radius: 12,
-                      backgroundColor: AppColors.accentBlue,
-                      child: Text('?',
-                          style: TextStyle(
-                              color: AppColors.textPrimary, fontSize: 10)),
-                    ),
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppColors.accentBlue,
+                    backgroundImage: profile?.photoUrl != null
+                        ? NetworkImage(profile!.photoUrl!)
+                        : null,
+                    child: profile?.photoUrl == null
+                        ? Text(
+                            profile?.initials ??
+                                (profile?.displayName != null
+                                    ? profile!.displayName![0].toUpperCase()
+                                    : '?'),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 10),
                   const PulsingRecordingDot(size: 8),

@@ -31,6 +31,7 @@ class RecordingIndicator extends ConsumerWidget {
               label: 'Error',
             );
           case RecordingState.idle:
+          case RecordingState.pending:
           case RecordingState.paused:
             return const SizedBox.shrink();
         }
