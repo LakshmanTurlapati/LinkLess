@@ -184,6 +184,17 @@ class BleManager {
     _log('Exchanged devices cleared');
   }
 
+  /// Remove a peer from the proximity state machine so it can be
+  /// re-detected on the next BLE scan cycle.
+  ///
+  /// Called after an identity chain failure so the peer is not stuck
+  /// in DETECTED state permanently. The next scan that discovers the
+  /// peer will create a fresh entry and emit a new DETECTED event.
+  void resetPeerTracking(String peerId) {
+    _stateMachine.resetPeer(peerId);
+    _log('Peer tracking reset: ${_truncateId(peerId)}');
+  }
+
   /// iOS background handler (null on non-iOS).
   IosBackgroundBle? get iosBackgroundBle => _iosBackgroundBle;
 

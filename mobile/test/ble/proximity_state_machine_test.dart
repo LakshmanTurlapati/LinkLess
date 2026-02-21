@@ -326,6 +326,77 @@ void main() {
       });
     });
 
+    group('resetPeer', () {
+      test('removed peer can be re-detected with fresh DETECTED event', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Enter detected state
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          expect(machine.getState('peer1'), ProximityState.detected);
+          expect(events, hasLength(1));
+          expect(events.last.type, ProximityEventType.detected);
+
+          // Reset the peer
+          machine.resetPeer('peer1');
+          expect(machine.getState('peer1'), ProximityState.idle);
+          expect(machine.peerCount, 0);
+
+          // Re-discover the same peer -- should emit a fresh DETECTED event
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          expect(machine.getState('peer1'), ProximityState.detected);
+          expect(events, hasLength(2));
+          expect(events.last.type, ProximityEventType.detected);
+          expect(events.last.peerId, 'peer1');
+        });
+      });
+
+      test('resetting unknown peer is a no-op', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Reset a peer that was never tracked
+          machine.resetPeer('unknown_peer');
+          async.flushMicrotasks();
+
+          expect(events, isEmpty);
+          expect(machine.peerCount, 0);
+        });
+      });
+
+      test('reset cancels active debounce timer (no spurious LOST event)', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Enter detected state
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+
+          // Push below exit threshold to start debounce
+          for (int i = 0; i < 20; i++) {
+            machine.onPeerDiscovered('peer1', -95);
+          }
+          async.flushMicrotasks();
+          expect(machine.getState('peer1'), ProximityState.detected);
+
+          // Reset peer while debounce is running
+          machine.resetPeer('peer1');
+
+          // Advance past debounce duration -- should NOT emit LOST event
+          async.elapse(defaultDebounceDuration);
+          final lostEvents = events.where(
+            (e) => e.type == ProximityEventType.lost,
+          );
+          expect(lostEvents, isEmpty);
+        });
+      });
+    });
+
     group('dispose', () {
       test('disposes cleanly without errors', () {
         fakeAsync((async) {

@@ -77,6 +77,10 @@ class BleCentralService {
 
   bool _isScanning = false;
 
+  /// Throttle fields for Android no-match scan diagnostics.
+  DateTime? _lastNoMatchLogTime;
+  int _maxNoMatchBatchSize = 0;
+
   /// Stream of discovery events when Linkless peers are found during scanning.
   Stream<BleDiscoveryEvent> get discoveryStream => _discoveryController.stream;
 
@@ -104,20 +108,32 @@ class BleCentralService {
     if (_isScanning) return;
 
     _isScanning = true;
+    _lastNoMatchLogTime = null;
+    _maxNoMatchBatchSize = 0;
 
     // Listen to scan results and emit discovery events
     _scanSubscription = FlutterBluePlus.onScanResults.listen(
       (results) {
-        // Android scan diagnostics: log when many results arrive but none match
+        // Android scan diagnostics: log when many results arrive but none match.
+        // Throttled to once per 5 seconds to avoid log flooding (~100ms callbacks).
         if (Platform.isAndroid && results.isNotEmpty) {
           final withService = results.where((r) =>
             r.advertisementData.serviceUuids.any((u) => u == BleConstants.serviceUuid)
           ).length;
           if (withService == 0 && results.length > 3) {
-            debugPrint(
-              '[BleCentralService] Android scan: ${results.length} results, '
-              '0 matched Linkless UUID',
-            );
+            if (results.length > _maxNoMatchBatchSize) {
+              _maxNoMatchBatchSize = results.length;
+            }
+            final now = DateTime.now();
+            if (_lastNoMatchLogTime == null ||
+                now.difference(_lastNoMatchLogTime!) > const Duration(seconds: 5)) {
+              debugPrint(
+                '[BleCentralService] Android scan: peak $_maxNoMatchBatchSize results, '
+                '0 matched Linkless UUID (throttled)',
+              );
+              _lastNoMatchLogTime = now;
+              _maxNoMatchBatchSize = 0;
+            }
           }
         }
 

@@ -151,6 +151,25 @@ class ProximityStateMachine {
     }
   }
 
+  /// Remove a peer from tracking entirely.
+  ///
+  /// Disposes any active debounce timer and removes the peer from the
+  /// internal map. The next BLE scan that discovers this peer will
+  /// create a fresh entry and emit a new DETECTED event if the RSSI
+  /// is above the enter threshold. This enables retry after identity
+  /// chain failure without waiting for the peer to physically walk away.
+  void resetPeer(String peerId) {
+    final peer = _peers.remove(peerId);
+    if (peer != null) {
+      peer.dispose();
+      debugPrint(
+        '[ProximityStateMachine] Reset peer: '
+        '${peerId.length > 8 ? peerId.substring(0, 8) : peerId}... '
+        '(was ${peer.state.name})',
+      );
+    }
+  }
+
   /// Clean up all timers and close the event stream.
   void dispose() {
     _disposed = true;

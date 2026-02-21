@@ -282,8 +282,25 @@ class RecordingService with WidgetsBindingObserver {
         '[RecordingService] Identity chain failed for $peerId: $e '
         '-- skipping encounter entirely, no recording',
       );
+
+      // Capture peer IDs before _clearActiveState nulls them.
+      final resetPeerId = _activePeerId;
+      final resetDeviceId = _originalDeviceId;
+
       _clearActiveState();
       _setState(RecordingState.idle);
+
+      // Schedule a delayed peer reset so the state machine drops this peer
+      // and re-detects it on the next BLE scan cycle. The 3s delay prevents
+      // an immediate retry storm (next scan cycle is ~5s).
+      Future.delayed(const Duration(seconds: 3), () {
+        if (resetPeerId != null) {
+          BleManager.instance.resetPeerTracking(resetPeerId);
+        }
+        if (resetDeviceId != null && resetDeviceId != resetPeerId) {
+          BleManager.instance.resetPeerTracking(resetDeviceId);
+        }
+      });
     }
   }
 
@@ -441,15 +458,61 @@ class RecordingService with WidgetsBindingObserver {
     );
   }
 
-  /// Fetches the peer's profile from the backend API.
+  /// Fetches the peer's profile from the backend API with retry.
   ///
-  /// If the fetch fails (network error, 404, etc.), the exception propagates
-  /// to the caller which will skip the encounter entirely -- no fallback to
-  /// partial identity (per user decision).
+  /// Makes up to 2 attempts (initial + 1 retry after 1s delay). On each
+  /// failure, logs status code, URL, response body, and full error for
+  /// diagnostics. Checks [_identityChainCompleter] during the retry delay
+  /// to abort early if the peer is lost. If both attempts fail, the
+  /// exception propagates to the caller which skips the encounter entirely.
+  /// Bug 2's peer reset then handles scheduling a fresh detection.
   Future<UserProfile> _fetchPeerProfile(String userId) async {
-    debugPrint('[RecordingService] Fetching profile for user: $userId');
-    final response = await _dio.get('/profile/$userId');
-    return UserProfile.fromJson(response.data as Map<String, dynamic>);
+    const maxAttempts = 2;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        debugPrint(
+          '[RecordingService] Fetching profile for user: $userId '
+          '(attempt $attempt/$maxAttempts)',
+        );
+        final response = await _dio.get('/profile/$userId');
+        return UserProfile.fromJson(response.data as Map<String, dynamic>);
+      } on DioException catch (e) {
+        debugPrint(
+          '[RecordingService] Profile fetch failed '
+          '(attempt $attempt/$maxAttempts): '
+          'status=${e.response?.statusCode}, '
+          'url=${e.requestOptions.uri}, '
+          'body=${e.response?.data}, '
+          'error=$e',
+        );
+        if (attempt < maxAttempts) {
+          // Wait before retry, but abort if peer is lost
+          await Future.delayed(const Duration(seconds: 1));
+          if (_identityChainCompleter?.isCompleted == true) {
+            throw StateError('Peer lost during profile fetch retry -- aborting');
+          }
+          continue;
+        }
+        rethrow;
+      } catch (e) {
+        debugPrint(
+          '[RecordingService] Profile fetch unexpected error '
+          '(attempt $attempt/$maxAttempts): $e',
+        );
+        if (attempt < maxAttempts) {
+          await Future.delayed(const Duration(seconds: 1));
+          if (_identityChainCompleter?.isCompleted == true) {
+            throw StateError('Peer lost during profile fetch retry -- aborting');
+          }
+          continue;
+        }
+        rethrow;
+      }
+    }
+
+    // Should not reach here, but satisfy return type
+    throw StateError('Profile fetch exhausted all attempts for $userId');
   }
 
   // ---------------------------------------------------------------------------
