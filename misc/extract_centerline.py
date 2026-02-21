@@ -25,7 +25,10 @@ PRUNE_MIN_LENGTH = 20
 GAUSSIAN_SIGMA = 7
 RDP_EPSILON = 1.8
 CATMULL_ROM_ALPHA = 0.5
-ASCENDER_LOOP_TARGET_GAP = 7.0   # desired SVG-unit gap between ascending/descending strokes
+ASCENDER_LOOP_TARGET_GAP = 6.0   # SVG-unit gap at widest point of loop
+LOOP_TRANSITION_FRAC = 0.125     # fraction of loop for each transition zone
+STEM_SAMPLE_HEIGHT_PX = 55       # px window below loop for median stem_x
+LOCAL_SMOOTH_SIGMA = 2.5         # Gaussian sigma for post-compression cleanup
 
 TARGET_VB_WIDTH = 241
 TARGET_VB_HEIGHT = 273
@@ -84,23 +87,25 @@ def chaikin_subdivide(points, iterations=2):
     return pts
 
 
+def _smoothstep(t):
+    """Hermite smoothstep: 0 at t=0, 1 at t=1, zero derivative at both ends."""
+    t = max(0.0, min(1.0, t))
+    return t * t * (3.0 - 2.0 * t)
+
+
 def compress_ascender_loop(points, target_gap_svg=ASCENDER_LOOP_TARGET_GAP):
-    """Compress the L-ascender loop horizontally toward the stem.
+    """Compress the L-ascender loop horizontally toward the stem (v3).
 
-    The skeleton centerline of the loop has two branches farther apart than
-    the visual crossing in the original logo.  This post-process squeezes
-    the loop x-coordinates toward stem_x using a UNIFORM ratio so that
-    when rendered with stroke-width=9 the strokes visually overlap.
-
-    A uniform ratio (rather than a sine envelope) preserves the original
-    teardrop proportions -- every point is scaled by the same fraction,
-    so the shape narrows without distortion.
+    v3 improvements over v2:
+    - Robust stem_x via median of a sample window (not single-point min)
+    - Smoothstep transition zones at entry/exit (no curvature discontinuity)
+    - Local Gaussian cleanup on the loop region after compression
 
     Args:
         points: list of (x, y) tuples (already in SVG x/y space, i.e.
                 col=x, row=y after the smooth_and_simplify conversion).
         target_gap_svg: desired gap in SVG units between the two strokes
-                at the widest point of the loop (default 7.0).
+                at the widest point of the loop (default 6.8).
 
     Returns:
         New list of (x, y) tuples with the loop section compressed.
@@ -109,22 +114,25 @@ def compress_ascender_loop(points, target_gap_svg=ASCENDER_LOOP_TARGET_GAP):
         return points
 
     # 1. Find the peak -- the global y-minimum (topmost point of the "L").
-    #    Note: points are (x, y) where y increases downward.
     peak_idx = min(range(len(points)), key=lambda i: points[i][1])
     peak_x, peak_y = points[peak_idx]
 
-    # 2. Find stem_x by looking at the minimum x in the descent section
-    #    (50-200 points after the peak).
-    descent_lo = min(peak_idx + 50, len(points) - 1)
-    descent_hi = min(peak_idx + 200, len(points))
-    if descent_hi <= descent_lo:
+    # 2. Robust stem_x via median of points in a y-based sample window below the loop.
+    #    Collect x-values from points after the peak whose y is within
+    #    STEM_SAMPLE_HEIGHT_PX of the peak -- these are the descent stroke
+    #    where the loop merges back into the stem.
+    stem_y_hi = peak_y + STEM_SAMPLE_HEIGHT_PX
+    stem_xs = [points[i][0] for i in range(peak_idx + 1, len(points))
+               if peak_y + 10 < points[i][1] <= stem_y_hi]
+    if len(stem_xs) < 3:
+        # Fallback: use a fixed index window
+        descent_lo = min(peak_idx + 10, len(points) - 1)
         descent_hi = min(peak_idx + 50, len(points))
-        descent_lo = peak_idx + 10
-    if descent_hi <= descent_lo:
-        print("  [compress_ascender_loop] Not enough points after peak, skipping.")
-        return points
-
-    stem_x = min(points[i][0] for i in range(descent_lo, descent_hi))
+        if descent_hi <= descent_lo:
+            print("  [compress_ascender_loop] Not enough points after peak, skipping.")
+            return points
+        stem_xs = [points[i][0] for i in range(descent_lo, descent_hi)]
+    stem_x = float(np.median(stem_xs))
 
     # 3. Walk backward from peak to find entry_idx where x returns to stem_x.
     entry_idx = peak_idx
@@ -144,6 +152,21 @@ def compress_ascender_loop(points, target_gap_svg=ASCENDER_LOOP_TARGET_GAP):
         print("  [compress_ascender_loop] Could not find loop boundaries, skipping.")
         return points
 
+    # 4b. Extend exit to cover the full overlap zone.
+    #     The ascending arm extends down to entry_idx's y-level. Points on the
+    #     descending arm below exit_idx still have x != stem_x and create a
+    #     visible gap if left uncompressed. Extend exit_idx until the
+    #     descending arm reaches the same y-depth as the ascending entry.
+    entry_y = points[entry_idx][1]
+    orig_exit_idx = exit_idx
+    for i in range(exit_idx + 1, len(points)):
+        if points[i][1] >= entry_y:
+            exit_idx = i
+            break
+    if exit_idx != orig_exit_idx:
+        print(f"  [compress_ascender_loop] Extended exit: {orig_exit_idx} -> {exit_idx} "
+              f"(matching entry y={entry_y:.0f})")
+
     loop_len = exit_idx - entry_idx
     if loop_len < 5:
         print("  [compress_ascender_loop] Loop too short, skipping.")
@@ -154,7 +177,6 @@ def compress_ascender_loop(points, target_gap_svg=ASCENDER_LOOP_TARGET_GAP):
     width_before = max(loop_xs) - min(loop_xs)
 
     # 5. Compute the scale factor that will be applied later (viewbox fitting).
-    #    We need this to convert the SVG target gap back to pre-scale coords.
     all_xs = [p[0] for p in points]
     all_ys = [p[1] for p in points]
     src_w = max(all_xs) - min(all_xs)
@@ -174,20 +196,45 @@ def compress_ascender_loop(points, target_gap_svg=ASCENDER_LOOP_TARGET_GAP):
     ratio = target_gap_prescale / max_dist
     ratio = min(ratio, 1.0)  # never expand
 
-    # 6. Apply uniform compression -- all points scaled by the same ratio.
+    # 6. Smoothstep transition zones + uniform core compression.
+    trans_len = max(3, int(loop_len * LOOP_TRANSITION_FRAC))
     result = list(points)
     for i in range(entry_idx, exit_idx + 1):
         x, y = points[i]
-        new_x = stem_x + (x - stem_x) * ratio
+        # Determine blend factor (0 = no compression, 1 = full compression)
+        dist_from_entry = i - entry_idx
+        dist_from_exit = exit_idx - i
+        if dist_from_entry < trans_len:
+            blend = _smoothstep(dist_from_entry / trans_len)
+        elif dist_from_exit < trans_len:
+            blend = _smoothstep(dist_from_exit / trans_len)
+        else:
+            blend = 1.0  # core zone: full compression
+        effective_ratio = 1.0 - blend * (1.0 - ratio)
+        new_x = stem_x + (x - stem_x) * effective_ratio
         result[i] = (new_x, y)
+
+    # 7. Local Gaussian cleanup on the compressed region only.
+    #    Do NOT extend past entry/exit boundaries -- blending with
+    #    uncompressed neighbors would undo compression near the edges.
+    loop_slice = slice(entry_idx,
+                       min(len(result), exit_idx + 1))
+    indices = list(range(*loop_slice.indices(len(result))))
+    if len(indices) > 3:
+        loop_xs_arr = np.array([result[i][0] for i in indices])
+        loop_xs_smooth = gaussian_filter1d(loop_xs_arr, sigma=LOCAL_SMOOTH_SIGMA)
+        for j, i in enumerate(indices):
+            result[i] = (float(loop_xs_smooth[j]), result[i][1])
 
     # Measure width after
     loop_xs_after = [result[i][0] for i in range(entry_idx, exit_idx + 1)]
     width_after = max(loop_xs_after) - min(loop_xs_after)
     print(f"  [compress_ascender_loop] Loop idx {entry_idx}-{exit_idx} "
-          f"(peak={peak_idx}), stem_x={stem_x:.1f}")
+          f"(peak={peak_idx}), stem_x={stem_x:.1f} (median)")
     print(f"  [compress_ascender_loop] Width: {width_before:.1f} -> {width_after:.1f} "
           f"(uniform ratio={ratio:.3f}, target_gap={target_gap_svg} SVG units)")
+    print(f"  [compress_ascender_loop] Transition zones: {trans_len} pts each, "
+          f"local smooth sigma={LOCAL_SMOOTH_SIGMA}")
 
     return result
 
