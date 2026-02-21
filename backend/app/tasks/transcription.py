@@ -4,7 +4,6 @@ Processes audio files through TranscriptionService (OpenAI Whisper),
 stores results in the transcripts table, and chains to summarization.
 """
 
-import json
 import logging
 
 from arq import Retry
@@ -22,8 +21,8 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
     """Transcribe a conversation's audio and chain to summarization.
 
     Idempotent: skips if transcript already exists for this conversation.
-    Retries with exponential backoff on failure (30s, 60s, 90s).
-    After 3 failed attempts, marks conversation as "failed".
+    Retries once with 30s delay on failure.
+    After 2 failed attempts, marks conversation as "failed".
 
     Args:
         ctx: ARQ worker context containing db_session_factory and redis.
@@ -94,7 +93,7 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
             # Store transcript in database
             transcript = Transcript(
                 conversation_id=conversation.id,
-                content=json.dumps(transcription_result.utterances),
+                content=transcription_result.full_text,
                 provider=transcription_result.provider,
                 language=transcription_result.language,
                 word_count=transcription_result.word_count,
@@ -125,7 +124,7 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
         except Exception as exc:
             await session.rollback()
 
-            if job_try >= 3:
+            if job_try >= 2:
                 # Max retries exhausted, mark as failed
                 async with ctx["db_session_factory"]() as fail_session:
                     fail_result = await fail_session.execute(
@@ -136,6 +135,7 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
                     fail_conv = fail_result.scalar_one_or_none()
                     if fail_conv is not None:
                         fail_conv.status = "failed"
+                        fail_conv.error_detail = str(exc)[:500]
                         await fail_session.commit()
 
                 logger.error(
@@ -146,8 +146,8 @@ async def transcribe_conversation(ctx: dict, conversation_id: str) -> None:
                 )
                 raise
 
-            # Retry with exponential backoff: 30s, 60s, 90s
-            defer_seconds = job_try * 30
+            # Retry with fixed 30s delay
+            defer_seconds = 30
             logger.warning(
                 "Transcription attempt %d failed for conversation %s, retrying in %ds: %s",
                 job_try,
