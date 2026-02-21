@@ -21,8 +21,9 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
     """Summarize a conversation transcript and update status to completed.
 
     Idempotent: skips if summary already exists for this conversation.
-    Retries with exponential backoff on failure (15s, 30s, 45s).
-    After 3 failed attempts, marks conversation as "failed".
+    Retries once with 30s delay on failure. After 2 failed attempts, marks
+    conversation as 'summarization_failed' (partial success -- transcript
+    preserved).
 
     Args:
         ctx: ARQ worker context containing db_session_factory.
@@ -64,13 +65,8 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
             return
 
         try:
-            # Parse utterances from transcript content and build plain text
-            utterances = json.loads(transcript.content)
-            lines: list[str] = []
-            for utt in utterances:
-                text = utt.get("text", "")
-                lines.append(text)
-            transcript_text = "\n".join(lines)
+            # Read transcript content as plain text
+            transcript_text = transcript.content
 
             # Generate summary via Grok
             summarization_service = SummarizationService(
@@ -110,8 +106,9 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
         except Exception as exc:
             await session.rollback()
 
-            if job_try >= 3:
-                # Max retries exhausted, mark as failed
+            if job_try >= 2:
+                # Max retries exhausted, mark as summarization_failed
+                # (partial success -- transcript is preserved)
                 async with ctx["db_session_factory"]() as fail_session:
                     fail_result = await fail_session.execute(
                         select(Conversation).where(
@@ -120,7 +117,8 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
                     )
                     fail_conv = fail_result.scalar_one_or_none()
                     if fail_conv is not None:
-                        fail_conv.status = "failed"
+                        fail_conv.status = "summarization_failed"
+                        fail_conv.error_detail = f"Summarization: {str(exc)[:480]}"
                         await fail_session.commit()
 
                 logger.error(
@@ -131,8 +129,8 @@ async def summarize_conversation(ctx: dict, conversation_id: str) -> None:
                 )
                 raise
 
-            # Retry with exponential backoff: 15s, 30s, 45s
-            defer_seconds = job_try * 15
+            # Retry once with 30s delay
+            defer_seconds = 30
             logger.warning(
                 "Summarization attempt %d failed for conversation %s, retrying in %ds: %s",
                 job_try,
