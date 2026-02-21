@@ -131,6 +131,10 @@ class BleManager {
   /// Set of device IDs already logged this scan cycle (avoids log flooding).
   final Set<String> _discoveryLoggedThisCycle = {};
 
+  /// Set of resolved peer IDs seen during the current scan cycle.
+  /// Used at scan cycle end to detect peers that have disappeared.
+  final Set<String> _peerIdsSeenThisCycle = {};
+
   // ---------------------------------------------------------------------------
   // Public Getters
   // ---------------------------------------------------------------------------
@@ -428,6 +432,11 @@ class BleManager {
   Future<void> _startScanCycle() async {
     await _performScan();
 
+    // After scan completes, check for detected peers that were NOT seen
+    // during this cycle. If a peer disappeared (e.g., other device turned
+    // off Bluetooth), start their debounce timer via onPeerLost().
+    _checkForAbsentPeers();
+
     // Schedule next scan cycle after a brief interval
     _scheduleScanCycle();
   }
@@ -437,6 +446,7 @@ class BleManager {
     if (!_isRunning) return;
 
     _discoveryLoggedThisCycle.clear();
+    _peerIdsSeenThisCycle.clear();
 
     try {
       final scanMode = Platform.isAndroid
@@ -512,6 +522,26 @@ class BleManager {
     });
   }
 
+  /// Check for detected peers not seen during the last scan cycle.
+  ///
+  /// When a peer disappears from BLE scans (e.g., the other device turned
+  /// off Bluetooth or walked out of range), this triggers the debounce
+  /// timer via onPeerLost(). After the debounce expires without the peer
+  /// reappearing, a LOST event is emitted and RecordingService stops
+  /// recording. This ensures the disconnect is mutual -- both devices
+  /// stop recording even if only one side turned off Bluetooth.
+  void _checkForAbsentPeers() {
+    final detectedPeers = _stateMachine.detectedPeerIds;
+    if (detectedPeers.isEmpty) return;
+
+    for (final peerId in detectedPeers) {
+      if (!_peerIdsSeenThisCycle.contains(peerId)) {
+        _stateMachine.onPeerLost(peerId);
+        _log('Peer absent from scan: ${_truncateId(peerId)} -- debounce started');
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Event Handlers
   // ---------------------------------------------------------------------------
@@ -528,6 +558,7 @@ class BleManager {
     // Resolve deviceId to userId if known, so RSSI updates target the
     // correct peer entry after a GATT exchange has completed.
     final resolvedPeerId = _deviceToUserIdMap[event.deviceId] ?? event.deviceId;
+    _peerIdsSeenThisCycle.add(resolvedPeerId);
     _stateMachine.onPeerDiscovered(resolvedPeerId, event.rssi);
 
     // Emit raw proximity event
@@ -659,6 +690,7 @@ class BleManager {
       // restart when Bluetooth is turned back on.
       _scanCycleTimer?.cancel();
       _scanCycleTimer = null;
+      _stateMachine.resetAllPeers();
     }
   }
 

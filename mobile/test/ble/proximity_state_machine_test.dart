@@ -397,6 +397,121 @@ void main() {
       });
     });
 
+    group('resetAllPeers', () {
+      test('emits LOST events for all detected peers', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Detect two peers
+          machine.onPeerDiscovered('peer1', -60);
+          machine.onPeerDiscovered('peer2', -55);
+          async.flushMicrotasks();
+          expect(events, hasLength(2));
+          expect(machine.getState('peer1'), ProximityState.detected);
+          expect(machine.getState('peer2'), ProximityState.detected);
+
+          // Reset all peers
+          machine.resetAllPeers();
+          async.flushMicrotasks();
+
+          // Should have 2 LOST events
+          final lostEvents = events.where(
+            (e) => e.type == ProximityEventType.lost,
+          ).toList();
+          expect(lostEvents, hasLength(2));
+          final lostPeerIds = lostEvents.map((e) => e.peerId).toSet();
+          expect(lostPeerIds, containsAll(['peer1', 'peer2']));
+        });
+      });
+
+      test('does not emit LOST events for idle peers', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Add an idle peer (weak signal, stays idle)
+          machine.onPeerDiscovered('idle_peer', -90);
+          async.flushMicrotasks();
+          expect(machine.getState('idle_peer'), ProximityState.idle);
+
+          // Add a detected peer
+          machine.onPeerDiscovered('detected_peer', -60);
+          async.flushMicrotasks();
+          expect(machine.getState('detected_peer'), ProximityState.detected);
+
+          events.clear();
+
+          // Reset all peers
+          machine.resetAllPeers();
+          async.flushMicrotasks();
+
+          // Only 1 LOST event (for the detected peer)
+          expect(events, hasLength(1));
+          expect(events.first.type, ProximityEventType.lost);
+          expect(events.first.peerId, 'detected_peer');
+        });
+      });
+
+      test('peer map is empty after reset', () {
+        fakeAsync((async) {
+          machine.onPeerDiscovered('peer1', -60);
+          machine.onPeerDiscovered('peer2', -55);
+          async.flushMicrotasks();
+          expect(machine.peerCount, 2);
+
+          machine.resetAllPeers();
+          expect(machine.peerCount, 0);
+        });
+      });
+
+      test('debounce timers are cancelled (no spurious events after reset)', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          // Detect peer and start debounce
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+
+          // Push below exit threshold to start debounce timer
+          for (int i = 0; i < 20; i++) {
+            machine.onPeerDiscovered('peer1', -95);
+          }
+          async.flushMicrotasks();
+
+          // Reset all peers (should cancel debounce timer)
+          machine.resetAllPeers();
+          async.flushMicrotasks();
+
+          final lostCount = events.where(
+            (e) => e.type == ProximityEventType.lost,
+          ).length;
+          expect(lostCount, 1); // Only from resetAllPeers
+
+          // Advance past debounce -- should NOT emit another LOST event
+          async.elapse(defaultDebounceDuration);
+          final lostCountAfter = events.where(
+            (e) => e.type == ProximityEventType.lost,
+          ).length;
+          expect(lostCountAfter, 1); // Still just 1
+        });
+      });
+
+      test('no-op when no peers are tracked', () {
+        fakeAsync((async) {
+          final events = <ProximityEvent>[];
+          machine.events.listen(events.add);
+
+          machine.resetAllPeers();
+          async.flushMicrotasks();
+
+          expect(events, isEmpty);
+          expect(machine.peerCount, 0);
+        });
+      });
+    });
+
     group('dispose', () {
       test('disposes cleanly without errors', () {
         fakeAsync((async) {

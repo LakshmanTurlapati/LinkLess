@@ -110,6 +110,15 @@ class ProximityStateMachine {
   /// Number of tracked peers.
   int get peerCount => _peers.length;
 
+  /// IDs of all peers currently in DETECTED state.
+  ///
+  /// Used by BleManager at the end of each scan cycle to identify peers
+  /// that were not seen during the scan and should have onPeerLost() called.
+  List<String> get detectedPeerIds => _peers.entries
+      .where((e) => e.value.state == ProximityState.detected)
+      .map((e) => e.key)
+      .toList();
+
   /// Called when a BLE scan discovers a peer with an RSSI reading.
   ///
   /// Updates the RSSI filter and evaluates state transitions.
@@ -166,6 +175,30 @@ class ProximityStateMachine {
         '[ProximityStateMachine] Reset peer: '
         '${peerId.length > 8 ? peerId.substring(0, 8) : peerId}... '
         '(was ${peer.state.name})',
+      );
+    }
+  }
+
+  /// Remove all tracked peers and emit LOST events for any in DETECTED state.
+  ///
+  /// Used when Bluetooth is turned off -- all peers are effectively lost.
+  void resetAllPeers() {
+    if (_disposed) return;
+    final detectedPeerIds = _peers.entries
+        .where((e) => e.value.state == ProximityState.detected)
+        .map((e) => e.key)
+        .toList();
+    for (final peerId in detectedPeerIds) {
+      _emitEvent(peerId, ProximityEventType.lost);
+    }
+    for (final peer in _peers.values) {
+      peer.dispose();
+    }
+    _peers.clear();
+    if (detectedPeerIds.isNotEmpty) {
+      debugPrint(
+        '[ProximityStateMachine] Reset all peers: '
+        '${detectedPeerIds.length} LOST event(s) emitted (BT off)',
       );
     }
   }
