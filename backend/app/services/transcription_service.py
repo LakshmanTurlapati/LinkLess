@@ -190,7 +190,12 @@ class TranscriptionService:
                 f"Audio exceeds OpenAI 25MB limit: {len(audio_bytes)} bytes"
             )
 
-        # Validate duration
+        # Ensure M4A format first (convert via ffmpeg if needed)
+        # Must run before duration check: raw AAC streams lack duration
+        # headers, causing ffprobe to hang scanning the entire stream.
+        audio_bytes = await asyncio.to_thread(_ensure_m4a, audio_bytes)
+
+        # Validate duration (now on properly containerized M4A)
         duration = await asyncio.to_thread(_get_audio_duration, audio_bytes)
         if duration < 1.0:
             raise ValueError(f"Audio too short: {duration:.1f}s (minimum 1s)")
@@ -198,9 +203,6 @@ class TranscriptionService:
             raise ValueError(
                 f"Audio exceeds 5-minute limit: {duration:.1f}s"
             )
-
-        # Ensure M4A format (convert via ffmpeg if needed)
-        audio_bytes = await asyncio.to_thread(_ensure_m4a, audio_bytes)
 
         client = OpenAI(api_key=self._openai_key)
 
