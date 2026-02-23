@@ -107,6 +107,11 @@ class ProximityStateMachine {
     return _peers[peerId]?.rssiFilter.currentRssi;
   }
 
+  /// Get the last time a peer was seen, or null if not tracked.
+  DateTime? getLastSeenAt(String peerId) {
+    return _peers[peerId]?.lastSeenAt;
+  }
+
   /// Number of tracked peers.
   int get peerCount => _peers.length;
 

@@ -38,7 +38,7 @@ class BleConstants {
 
   /// Debounce timeout before a device is considered truly exited.
   /// Prevents false exits from momentary signal drops.
-  static const Duration debounceTimeout = Duration(seconds: 10);
+  static const Duration debounceTimeout = Duration(seconds: 5);
 
   /// Interval between scan cycles when using periodic scanning.
   static const Duration scanInterval = Duration(seconds: 5);

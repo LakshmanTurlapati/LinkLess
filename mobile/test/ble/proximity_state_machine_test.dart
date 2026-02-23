@@ -512,6 +512,69 @@ void main() {
       });
     });
 
+    group('getLastSeenAt', () {
+      test('returns null for unknown peer', () {
+        expect(machine.getLastSeenAt('unknown_peer'), isNull);
+      });
+
+      test('returns timestamp after peer discovered', () {
+        fakeAsync((async) {
+          final before = DateTime.now();
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          final lastSeen = machine.getLastSeenAt('peer1');
+          expect(lastSeen, isNotNull);
+          expect(
+            lastSeen!.isAfter(before) || lastSeen.isAtSameMomentAs(before),
+            isTrue,
+          );
+        });
+      });
+
+      test('updates on each discovery', () {
+        fakeAsync((async) {
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          final firstSeen = machine.getLastSeenAt('peer1');
+
+          async.elapse(Duration(seconds: 1));
+
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          final secondSeen = machine.getLastSeenAt('peer1');
+
+          expect(secondSeen, isNotNull);
+          expect(firstSeen, isNotNull);
+          expect(secondSeen!.isAfter(firstSeen!), isTrue);
+        });
+      });
+
+      test('returns null after resetPeer', () {
+        fakeAsync((async) {
+          machine.onPeerDiscovered('peer1', -60);
+          async.flushMicrotasks();
+          expect(machine.getLastSeenAt('peer1'), isNotNull);
+
+          machine.resetPeer('peer1');
+          expect(machine.getLastSeenAt('peer1'), isNull);
+        });
+      });
+
+      test('returns null after resetAllPeers', () {
+        fakeAsync((async) {
+          machine.onPeerDiscovered('peer1', -60);
+          machine.onPeerDiscovered('peer2', -55);
+          async.flushMicrotasks();
+          expect(machine.getLastSeenAt('peer1'), isNotNull);
+          expect(machine.getLastSeenAt('peer2'), isNotNull);
+
+          machine.resetAllPeers();
+          expect(machine.getLastSeenAt('peer1'), isNull);
+          expect(machine.getLastSeenAt('peer2'), isNull);
+        });
+      });
+    });
+
     group('dispose', () {
       test('disposes cleanly without errors', () {
         fakeAsync((async) {

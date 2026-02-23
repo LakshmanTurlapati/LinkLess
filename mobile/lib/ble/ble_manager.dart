@@ -107,6 +107,7 @@ class BleManager {
   StreamSubscription<bool>? _backgroundStateSubscription;
 
   Timer? _scanCycleTimer;
+  Timer? _peerStalenessTimer;
   bool _isRunning = false;
   bool _isInitialized = false;
   String _currentUserId = '';
@@ -376,6 +377,11 @@ class BleManager {
       _log('Bluetooth adapter power-on timed out -- skipping peripheral advertising');
       // Still start scanning even if advertising can't start
       await _startScanCycle();
+      _peerStalenessTimer?.cancel();
+      _peerStalenessTimer = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => _checkPeerStaleness(),
+      );
       _log('BLE started: scanning only (advertising skipped)');
       return;
     }
@@ -385,6 +391,13 @@ class BleManager {
       _startScanCycle(),
       _peripheralService.startAdvertising(userId),
     ]);
+
+    // Start periodic staleness check for faster peer-lost detection
+    _peerStalenessTimer?.cancel();
+    _peerStalenessTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _checkPeerStaleness(),
+    );
 
     _log('BLE started: scanning and advertising');
   }
@@ -400,6 +413,10 @@ class BleManager {
     // Cancel scan cycle timer
     _scanCycleTimer?.cancel();
     _scanCycleTimer = null;
+
+    // Cancel staleness timer
+    _peerStalenessTimer?.cancel();
+    _peerStalenessTimer = null;
 
     await Future.wait([
       _centralService.stopScanning(),
@@ -538,6 +555,26 @@ class BleManager {
       if (!_peerIdsSeenThisCycle.contains(peerId)) {
         _stateMachine.onPeerLost(peerId);
         _log('Peer absent from scan: ${_truncateId(peerId)} -- debounce started');
+      }
+    }
+  }
+
+  /// Periodically check for stale peers that haven't been seen in 10+ seconds.
+  ///
+  /// Runs every 5 seconds to detect peer absence faster than the end-of-cycle
+  /// _checkForAbsentPeers(). If a peer hasn't been seen in 10 seconds, starts
+  /// debounce via onPeerLost(). Combined with the 5s debounce, worst-case stop
+  /// latency drops from ~40s to ~15s.
+  void _checkPeerStaleness() {
+    if (!_isRunning) return;
+    final now = DateTime.now();
+    for (final peerId in _stateMachine.detectedPeerIds) {
+      final lastSeen = _stateMachine.getLastSeenAt(peerId);
+      if (lastSeen == null) continue;
+      if (now.difference(lastSeen).inSeconds >= 10) {
+        _stateMachine.onPeerLost(peerId);
+        _log('Peer stale (${now.difference(lastSeen).inSeconds}s): '
+            '${_truncateId(peerId)} -- debounce started');
       }
     }
   }
@@ -684,12 +721,20 @@ class BleManager {
       // restart scanning and advertising.
       _startScanCycle();
       _peripheralService.startAdvertising(_currentUserId);
+      // Restart staleness timer
+      _peerStalenessTimer?.cancel();
+      _peerStalenessTimer = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => _checkPeerStaleness(),
+      );
     } else if (state != BluetoothAdapterState.on && _isRunning) {
       // Bluetooth turned off, scanning and advertising will
       // automatically stop. We keep _isRunning = true so we
       // restart when Bluetooth is turned back on.
       _scanCycleTimer?.cancel();
       _scanCycleTimer = null;
+      _peerStalenessTimer?.cancel();
+      _peerStalenessTimer = null;
       _stateMachine.resetAllPeers();
     }
   }
@@ -710,6 +755,9 @@ class BleManager {
 
     await _backgroundStateSubscription?.cancel();
     _backgroundStateSubscription = null;
+
+    _peerStalenessTimer?.cancel();
+    _peerStalenessTimer = null;
 
     _stateMachine.dispose();
 
