@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = (
+SUMMARIZATION_SYSTEM_PROMPT = (
     "You summarize conversations like a friend giving a casual recap. "
     "Given a transcript of a conversation between two people, produce a JSON "
     "object with exactly two fields:\n"
@@ -87,7 +87,7 @@ class SummarizationService:
         response = await client.chat.completions.create(
             model="grok-4-1-fast-non-reasoning",
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": SUMMARIZATION_SYSTEM_PROMPT},
                 {"role": "user", "content": f"Transcript:\n{transcript_text}"},
             ],
             response_format={"type": "json_object"},
