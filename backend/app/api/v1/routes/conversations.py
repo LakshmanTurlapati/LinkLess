@@ -360,14 +360,7 @@ async def force_retranscribe(
             detail="Conversation is not in a failed state",
         )
 
-    # 409 guard layer 1: status-based check for active processing
-    if conversation.status in ("transcribing", "summarizing"):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Conversation already has a job in progress",
-        )
-
-    # 409 guard layer 2: check ARQ job queue for existing retranscribe job
+    # 409 guard: check ARQ job queue for existing retranscribe job
     arq_pool = getattr(request.app.state, "arq_pool", None)
     if arq_pool is None:
         raise HTTPException(
