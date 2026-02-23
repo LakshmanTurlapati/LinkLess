@@ -21,6 +21,7 @@ from app.schemas.conversation import (
     SearchResultResponse,
     SummaryResponse,
     TranscriptResponse,
+    build_error_object,
 )
 from app.services.conversation_service import ConversationService
 from app.services.storage_service import StorageService
@@ -151,9 +152,12 @@ async def list_conversations(
     """
     service = ConversationService(db)
     conversations = await service.list_conversations(user.id)
-    return [
-        ConversationResponse.model_validate(conv) for conv in conversations
-    ]
+    results = []
+    for conv in conversations:
+        resp = ConversationResponse.model_validate(conv)
+        resp.error = build_error_object(conv)
+        results.append(resp)
+    return results
 
 
 @router.get(
@@ -295,6 +299,7 @@ async def get_conversation(
     summary = detail["summary"]
 
     result = ConversationDetail.model_validate(conversation)
+    result.error = build_error_object(conversation)
 
     if transcript is not None:
         result.transcript = TranscriptResponse.model_validate(transcript)
