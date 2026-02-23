@@ -7,6 +7,86 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
+def _sanitize_error_message(raw: Optional[str]) -> str:
+    """Strip traceback noise and truncate to a safe display length.
+
+    Filters out lines that look like Python tracebacks (Traceback header,
+    File references, and indented continuation lines). If nothing survives
+    the filter, falls back to the last line of the original text. Returns
+    "Unknown error" when the input is empty or None.
+    """
+    if not raw:
+        return "Unknown error"
+
+    lines = raw.splitlines()
+    cleaned = [
+        line
+        for line in lines
+        if not line.startswith("Traceback")
+        and not line.startswith("File ")
+        and not line.startswith("  ")
+    ]
+    result = " ".join(cleaned).strip()
+
+    # If filtering removed everything, use the last line of the original
+    if not result:
+        result = lines[-1].strip() if lines else ""
+
+    if not result:
+        return "Unknown error"
+
+    # Truncate to 300 chars
+    if len(result) > 300:
+        result = result[:297] + "..."
+
+    return result
+
+
+class ConversationErrorDetail(BaseModel):
+    """Structured error information for a failed conversation."""
+
+    stage: str
+    status: str
+    message: str
+    failed_at: Optional[str] = None
+
+
+def build_error_object(conversation) -> Optional[ConversationErrorDetail]:
+    """Derive an error object from conversation model state.
+
+    Returns a ConversationErrorDetail for conversations with status
+    'failed' (transcription stage) or 'summarization_failed'
+    (summarization stage). Returns None for all other statuses.
+    """
+    if conversation.status == "failed":
+        return ConversationErrorDetail(
+            stage="transcription",
+            status=conversation.status,
+            message=_sanitize_error_message(
+                conversation.error_detail or ""
+            ),
+            failed_at=(
+                conversation.updated_at.isoformat()
+                if conversation.updated_at
+                else None
+            ),
+        )
+    if conversation.status == "summarization_failed":
+        return ConversationErrorDetail(
+            stage="summarization",
+            status=conversation.status,
+            message=_sanitize_error_message(
+                conversation.error_detail or ""
+            ),
+            failed_at=(
+                conversation.updated_at.isoformat()
+                if conversation.updated_at
+                else None
+            ),
+        )
+    return None
+
+
 class ConversationCreate(BaseModel):
     """Request body for creating a new conversation."""
 
@@ -33,6 +113,8 @@ class ConversationResponse(BaseModel):
     ended_at: Optional[datetime] = None
     duration_seconds: Optional[int] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
+    error: Optional[ConversationErrorDetail] = None
 
 
 class TranscriptResponse(BaseModel):
