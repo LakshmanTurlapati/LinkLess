@@ -117,9 +117,15 @@ final activePeerProfileProvider = Provider<UserProfile?>((ref) {
 });
 
 /// Streams the list of all conversations as domain models.
+///
+/// Excludes debug recordings (peerId starting with "debug_") so they do
+/// not appear in the main conversation list, map, or search results.
 final conversationListProvider = StreamProvider<List<ConversationLocal>>((ref) {
   final dao = ref.watch(conversationDaoProvider);
   return dao.watchAllConversations().map(
-    (entries) => entries.map(ConversationLocal.fromEntry).toList(),
+    (entries) => entries
+        .map(ConversationLocal.fromEntry)
+        .where((c) => !c.peerId.startsWith('debug_'))
+        .toList(),
   );
 });
