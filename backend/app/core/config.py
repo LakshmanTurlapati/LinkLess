@@ -61,6 +61,7 @@ class Settings(BaseSettings):
 
     # App
     debug: bool = False
+    debug_mode: bool = False
     api_prefix: str = "/api/v1"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
