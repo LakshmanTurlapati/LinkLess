@@ -6,7 +6,7 @@ import uuid as uuid_mod
 from typing import Optional
 
 from geoalchemy2 import WKTElement
-from sqlalchemy import Date, cast, func, or_, select
+from sqlalchemy import Date, cast, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -234,6 +234,77 @@ class ConversationService:
         )
         result = await self.db.execute(stmt)
         return result.all()
+
+    async def get_conversation_by_id(
+        self, conversation_id: uuid_mod.UUID
+    ) -> Optional[Conversation]:
+        """Fetch a conversation by ID without user ownership check.
+
+        Intended for debug/admin operations where user context is
+        not applicable (e.g., retranscribe endpoint).
+
+        Args:
+            conversation_id: The conversation's UUID.
+
+        Returns:
+            The Conversation if found, None otherwise.
+        """
+        stmt = select(Conversation).where(
+            Conversation.id == conversation_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def delete_transcript(
+        self, conversation_id: uuid_mod.UUID
+    ) -> None:
+        """Delete the transcript row for a conversation if it exists.
+
+        Used during retranscribe to clear partial or stale transcripts
+        before re-enqueuing the transcription task.
+
+        Args:
+            conversation_id: The conversation's UUID.
+        """
+        await self.db.execute(
+            delete(Transcript).where(
+                Transcript.conversation_id == conversation_id
+            )
+        )
+
+    async def delete_summary(
+        self, conversation_id: uuid_mod.UUID
+    ) -> None:
+        """Delete the summary row for a conversation if it exists.
+
+        Used during retranscribe to clear stale summaries before
+        re-enqueuing the summarization task.
+
+        Args:
+            conversation_id: The conversation's UUID.
+        """
+        await self.db.execute(
+            delete(Summary).where(
+                Summary.conversation_id == conversation_id
+            )
+        )
+
+    async def reset_for_retranscribe(
+        self, conversation: Conversation, target_status: str
+    ) -> None:
+        """Reset a conversation's status and clear error detail for retry.
+
+        Updates the conversation status to the target pre-failure state
+        and clears the error_detail field, then commits and refreshes.
+
+        Args:
+            conversation: The Conversation model instance.
+            target_status: The status to reset to (e.g., "uploaded" or "transcribed").
+        """
+        conversation.status = target_status
+        conversation.error_detail = None
+        await self.db.commit()
+        await self.db.refresh(conversation)
 
     async def search_conversations(
         self,
