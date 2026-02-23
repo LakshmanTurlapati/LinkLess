@@ -120,8 +120,8 @@ class _DebugRecordButtonState extends ConsumerState<DebugRecordButton> {
     }
 
     // Guard: check if user is logged in
-    final userId = ref.read(authProvider).user?.id;
-    if (userId == null) {
+    final authState = ref.read(authProvider);
+    if (authState.status != AuthStatus.authenticated) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -131,6 +131,7 @@ class _DebugRecordButtonState extends ConsumerState<DebugRecordButton> {
       }
       return;
     }
+    final userId = authState.user?.id ?? 'debug';
 
     // Start recording
     try {

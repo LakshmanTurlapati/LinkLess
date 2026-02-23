@@ -42,6 +42,8 @@ class DebugChatService {
 
     await for (final chunk in stream) {
       buffer += const Utf8Decoder(allowMalformed: true).convert(chunk);
+      // Normalize \r\n to \n (sse-starlette sends \r\n line endings)
+      buffer = buffer.replaceAll('\r', '');
 
       while (buffer.contains('\n\n')) {
         final index = buffer.indexOf('\n\n');
