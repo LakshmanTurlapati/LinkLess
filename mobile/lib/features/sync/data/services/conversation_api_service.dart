@@ -85,4 +85,40 @@ class ConversationApiService {
         .map((e) => e as Map<String, dynamic>)
         .toList();
   }
+
+  /// Fetches backend health status for all infrastructure components.
+  ///
+  /// GET /api/v1/health
+  /// Requires authentication. Results are cached for 30s on backend.
+  /// Returns the full HealthResponse JSON with component-level status for
+  /// Database, Redis, Tigris, ARQ worker, PostGIS, and API keys.
+  ///
+  /// The health endpoint may return HTTP 503 for degraded/unhealthy status.
+  /// This method accepts 503 responses and still returns the response body,
+  /// since the health data is present regardless of HTTP status.
+  Future<Map<String, dynamic>> getHealthStatus() async {
+    final response = await _dio.get(
+      '/health',
+      options: Options(
+        validateStatus: (status) => status != null && status < 600,
+      ),
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Triggers force retranscription for a failed conversation.
+  ///
+  /// POST /api/v1/conversations/{conversationId}/retranscribe
+  /// Debug-only endpoint. Requires DEBUG_MODE=true on the backend.
+  ///
+  /// Lets DioException propagate naturally for error handling in the UI layer:
+  /// - 404: Backend not in debug mode (endpoint hidden)
+  /// - 409: A retranscribe job is already in progress for this conversation
+  /// - 400: Conversation is not in a failed state
+  Future<Map<String, dynamic>> retranscribe(String conversationId) async {
+    final response = await _dio.post(
+      '/conversations/$conversationId/retranscribe',
+    );
+    return response.data as Map<String, dynamic>;
+  }
 }
