@@ -5,18 +5,22 @@ import 'package:linkless/core/theme/app_colors.dart';
 import 'package:linkless/features/debug/presentation/providers/debug_panel_provider.dart';
 import 'package:linkless/features/debug/presentation/widgets/debug_record_button.dart';
 import 'package:linkless/features/debug/presentation/widgets/debug_recording_tile.dart';
+import 'package:linkless/features/debug/presentation/widgets/ai_chat_section.dart';
 import 'package:linkless/features/debug/presentation/widgets/health_check_section.dart';
 
-/// Debug panel screen with health check, record button, and recordings list.
+/// Debug panel screen with health check, record button, recordings list,
+/// and AI chat.
 ///
 /// Replaces the previous BLE debug screen with a streamlined debug panel
 /// that surfaces backend health status, provides manual recording capability,
-/// and lists debug recordings with playback, error display, and retranscribe.
+/// lists debug recordings with playback/error/retranscribe, and offers an
+/// interactive AI chat section for testing the debug chat endpoint.
 ///
-/// Layout: single scrollable page with three sections top-to-bottom:
+/// Layout: single scrollable page with four sections top-to-bottom:
 /// 1. Backend Health -- always visible status dots for all services
 /// 2. Record Button -- tap to record/stop with timer and waveform
 /// 3. Debug Recordings -- list of recordings with status and playback
+/// 4. AI Chat -- test message input with streaming AI response display
 class BleDebugScreen extends ConsumerStatefulWidget {
   const BleDebugScreen({super.key});
 
@@ -116,6 +120,10 @@ class _BleDebugScreenState extends ConsumerState<BleDebugScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+
+            // Section 4: AI Chat
+            const AiChatSection(),
           ],
         ),
       ),
