@@ -55,15 +55,19 @@ class _DebugRecordingTileState extends ConsumerState<DebugRecordingTile> {
           // Row 1: Header
           _buildHeader(c),
 
-          // Row 2: Error display (always visible for failed recordings)
+          // Row 2: Transcript & summary (completed recordings)
+          if (c.syncStatus == 'completed' && c.serverId != null)
+            _buildTranscriptSummary(c.serverId!),
+
+          // Row 3: Error display (always visible for failed recordings)
           if (c.syncStatus == 'failed' && c.serverId != null)
             _buildErrorDisplay(c.serverId!),
 
-          // Row 3: Retranscribe button (failed recordings with serverId)
+          // Row 4: Retranscribe button (failed recordings with serverId)
           if (c.syncStatus == 'failed' && c.serverId != null)
             _buildRetranscribeButton(c.serverId!),
 
-          // Row 4: Inline playback (when expanded)
+          // Row 5: Inline playback (when expanded)
           if (_isExpanded && c.hasAudio) _buildPlayback(c.audioFilePath!),
         ],
       ),
@@ -203,6 +207,95 @@ class _DebugRecordingTileState extends ConsumerState<DebugRecordingTile> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTranscriptSummary(String serverId) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final detailAsync = ref.watch(conversationDetailProvider(serverId));
+
+        return detailAsync.when(
+          data: (data) {
+            if (data == null) return const SizedBox.shrink();
+
+            final transcript = data['transcript'];
+            final summary = data['summary'];
+
+            if (transcript == null && summary == null) {
+              return const SizedBox.shrink();
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (summary != null && summary['content'] != null) ...[
+                    const Text(
+                      'Summary',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      summary['content'] as String,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (summary['key_topics'] != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Topics: ${summary['key_topics']}',
+                        style: const TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (transcript != null &&
+                      transcript['content'] != null) ...[
+                    if (summary != null) const SizedBox(height: 8),
+                    const Text(
+                      'Transcript',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      transcript['content'] as String,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                      maxLines: 6,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
+            ),
+          ),
+          error: (_, __) => const SizedBox.shrink(),
+        );
+      },
     );
   }
 
