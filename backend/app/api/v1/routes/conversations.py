@@ -5,10 +5,12 @@ import logging
 import uuid
 from typing import Optional
 
+from arq.jobs import Job, JobStatus
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
@@ -29,6 +31,16 @@ from app.services.storage_service import StorageService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["conversations"])
+
+
+def require_debug_mode() -> None:
+    """Gate endpoint behind DEBUG_MODE env var. Returns 404 when off.
+
+    Uses 404 instead of 403 so the endpoint is invisible in production
+    (a 403 would reveal the endpoint exists).
+    """
+    if not settings.debug_mode:
+        raise HTTPException(status_code=404, detail="Not found")
 
 
 @router.post(
@@ -307,3 +319,106 @@ async def get_conversation(
         result.summary = SummaryResponse.model_validate(summary)
 
     return result
+
+
+@router.post(
+    "/{conversation_id}/retranscribe",
+    dependencies=[Depends(require_debug_mode)],
+)
+async def force_retranscribe(
+    conversation_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Force re-run of the failed pipeline stage for a conversation.
+
+    Debug-only endpoint (returns 404 when DEBUG_MODE is off). Does NOT
+    check user ownership -- debug mode implies admin access.
+
+    Stage-aware behavior:
+    - status "failed" (transcription failed): clears transcript + summary,
+      resets to "uploaded", enqueues transcribe_conversation.
+    - status "summarization_failed": clears summary only, keeps transcript,
+      resets to "transcribed", enqueues summarize_conversation.
+
+    Returns 400 if conversation is not in a failed state.
+    Returns 409 if a retranscribe job is already in progress.
+    """
+    service = ConversationService(db)
+    conversation = await service.get_conversation_by_id(conversation_id)
+
+    if conversation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+
+    # Validate conversation is in a failed state
+    if conversation.status not in ("failed", "summarization_failed"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Conversation is not in a failed state",
+        )
+
+    # 409 guard layer 1: status-based check for active processing
+    if conversation.status in ("transcribing", "summarizing"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Conversation already has a job in progress",
+        )
+
+    # 409 guard layer 2: check ARQ job queue for existing retranscribe job
+    arq_pool = getattr(request.app.state, "arq_pool", None)
+    if arq_pool is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Job queue is not available",
+        )
+
+    job_id = f"retranscribe:{conversation_id}"
+    job = Job(job_id=job_id, redis=arq_pool)
+    job_status = await job.status()
+    if job_status in (JobStatus.queued, JobStatus.deferred, JobStatus.in_progress):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A retranscribe job is already in progress",
+        )
+
+    # Stage-aware retranscribe
+    if conversation.status == "failed":
+        # Transcription failed: clear all artifacts, re-run from scratch
+        await service.delete_transcript(conversation_id)
+        await service.delete_summary(conversation_id)
+        await service.reset_for_retranscribe(conversation, "uploaded")
+        result = await arq_pool.enqueue_job(
+            "transcribe_conversation",
+            conversation_id=str(conversation_id),
+            _job_id=job_id,
+        )
+        logger.info(
+            "Enqueued retranscribe (transcription) for conversation %s, job_id=%s",
+            conversation_id,
+            job_id,
+        )
+    else:
+        # Summarization failed: keep transcript, re-run summarization only
+        await service.delete_summary(conversation_id)
+        await service.reset_for_retranscribe(conversation, "transcribed")
+        result = await arq_pool.enqueue_job(
+            "summarize_conversation",
+            str(conversation_id),
+            _job_id=job_id,
+        )
+        logger.info(
+            "Enqueued retranscribe (summarization) for conversation %s, job_id=%s",
+            conversation_id,
+            job_id,
+        )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A retranscribe job is already in progress",
+        )
+
+    return {"status": "enqueued", "job_id": job_id}
